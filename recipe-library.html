@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>健康饮食 - 食谱库</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .recipe-card {
+            transition: all 0.3s ease;
+        }
+
+        .recipe-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 添加加载动画 */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #22c55e;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#22c55e',
+                        secondary: '#f97316',
+                        dark: '#1e293b',
+                    },
+                },
+            }
+        }
+    </script>
+</head>
+
+<body class="bg-neutral min-h-screen flex flex-col">
+    <!-- 导航栏 -->
+    <nav class="bg-white shadow-md sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex justify-between items-center">
+                <a href="index.html" class="text-2xl font-bold text-primary">健康饮食</a>
+                <div class="hidden md:flex space-x-6">
+                    <a href="index.html" class="text-dark hover:text-primary font-medium">首页</a>
+                    <a href="diet-advice.html" class="text-dark hover:text-primary font-medium">饮食建议</a>
+                    <a href="recipe-library.html" class="text-primary font-medium border-b-2 border-primary">食谱库</a>
+                    <a href="calorie-calculator.html" class="text-dark hover:text-primary font-medium">卡路里计算</a>
+                    <a href="diet-record.html" class="text-dark hover:text-primary font-medium">饮食记录</a>
+                    <a href="community.html" class="text-dark hover:text-primary font-medium">美食社区</a>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="login.html" class="hidden md:block text-dark hover:text-primary font-medium">登录</a>
+                    <a href="register.html"
+                        class="hidden md:block bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition">注册</a>
+                    <button id="menuBtn" class="md:hidden text-dark text-xl">
+                        <i class="fa fa-bars"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- 移动端导航菜单 -->
+        <div id="mobileMenu" class="md:hidden hidden bg-white shadow-lg absolute w-full">
+            <div class="container mx-auto px-4 py-3 flex flex-col space-y-4">
+                <a href="index.html" class="text-dark hover:text-primary font-medium py-2 border-b">首页</a>
+                <a href="diet-advice.html" class="text-dark hover:text-primary font-medium py-2 border-b">饮食建议</a>
+                <a href="recipe-library.html" class="text-primary font-medium py-2 border-b">食谱库</a>
+                <a href="calorie-calculator.html"
+                    class="text-dark hover:text-primary font-medium py-2 border-b">卡路里计算</a>
+                <a href="diet-record.html" class="text-dark hover:text-primary font-medium py-2 border-b">饮食记录</a>
+                <a href="community.html" class="text-dark hover:text-primary font-medium py-2 border-b">美食社区</a>
+                <div class="flex space-x-4 pt-2">
+                    <a href="login.html" class="text-dark hover:text-primary font-medium">登录</a>
+                    <a href="register.html"
+                        class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition">注册</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 食谱库核心内容 -->
+    <section class="py-12 flex-grow">
+        <div class="container mx-auto px-4">
+            <h2 class="text-3xl font-bold text-center mb-10 text-dark">智能食谱库</h2>
+
+            <!-- 搜索+筛选栏 -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-8 max-w-5xl mx-auto">
+                <div class="flex flex-col md:flex-row gap-4">
+                    <div class="flex-1">
+                        <input type="text" id="recipeSearchInput" placeholder="搜索食谱（如：pasta, chicken, salad）"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                            value="chicken">
+                    </div>
+                    <select id="recipeDietSelect"
+                        class="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                        <option value="">所有饮食类型</option>
+                        <option value="vegetarian">素食</option>
+                        <option value="vegan">严格素食</option>
+                        <option value="gluten free">无麸质</option>
+                        <option value="ketogenic">生酮</option>
+                        <option value="paleo">原始饮食</option>
+                    </select>
+                    <select id="recipeCuisineSelect"
+                        class="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                        <option value="">所有菜系</option>
+                        <option value="chinese">中式</option>
+                        <option value="italian">意式</option>
+                        <option value="mexican">墨西哥</option>
+                        <option value="indian">印度</option>
+                        <option value="american">美式</option>
+                    </select>
+                    <button id="searchBtn"
+                        class="bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary/90 transition">
+                        <i class="fa fa-search mr-2"></i>搜索
+                    </button>
+                </div>
+            </div>
+
+            <!-- 加载状态提示 -->
+            <div id="loadingTip" class="text-center text-gray-500 hidden">
+                <div class="loader mb-2"></div>
+                <p>正在加载食谱...</p>
+            </div>
+
+            <!-- 错误提示 -->
+            <div id="errorTip" class="text-center text-red-500 py-10 hidden">
+                <i class="fa fa-exclamation-triangle text-4xl mb-3"></i>
+                <p id="errorMessage">加载失败，请稍后重试</p>
+            </div>
+
+            <!-- 无结果提示 -->
+            <div id="noResultTip" class="text-center text-gray-500 py-10 hidden">
+                <i class="fa fa-search text-4xl mb-3"></i>
+                <p>未找到相关食谱，试试换个关键词吧～</p>
+            </div>
+
+            <!-- 食谱列表展示 -->
+            <div id="recipeList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+                <!-- 食谱卡片会动态渲染 -->
+            </div>
+
+            <!-- 分页控制 -->
+            <div id="pagination" class="mt-10 text-center hidden">
+                <button id="prevPage"
+                    class="bg-gray-100 text-dark px-4 py-2 rounded-lg hover:bg-gray-200 transition mr-2">
+                    <i class="fa fa-chevron-left mr-1"></i> 上一页
+                </button>
+                <span id="pageInfo" class="text-gray-600 mx-4"></span>
+                <button id="nextPage"
+                    class="bg-gray-100 text-dark px-4 py-2 rounded-lg hover:bg-gray-200 transition ml-2">
+                    下一页 <i class="fa fa-chevron-right ml-1"></i>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- 页脚 -->
+    <footer class="bg-dark text-white mt-auto">
+        <div class="container mx-auto px-4 py-12">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div>
+                    <h3 class="text-xl font-bold mb-4 text-primary">健康饮食</h3>
+                    <p class="text-gray-400 mb-4">关注饮食健康，享受美好生活</p>
+                    <div class="flex space-x-4">
+                        <a href="#" class="text-gray-400 hover:text-white transition">
+                            <i class="fa fa-weixin text-xl"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-white transition">
+                            <i class="fa fa-weibo text-xl"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-white transition">
+                            <i class="fa fa-qq text-xl"></i>
+                        </a>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold mb-4">快速链接</h3>
+                    <ul class="space-y-2">
+                        <li><a href="index.html" class="text-gray-400 hover:text-white transition">首页</a></li>
+                        <li><a href="diet-advice.html" class="text-gray-400 hover:text-white transition">饮食建议</a></li>
+                        <li><a href="recipe-library.html" class="text-gray-400 hover:text-white transition">食谱库</a></li>
+                        <li><a href="community.html" class="text-gray-400 hover:text-white transition">美食社区</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold mb-4">功能服务</h3>
+                    <ul class="space-y-2">
+                        <li><a href="calorie-calculator.html"
+                                class="text-gray-400 hover:text-white transition">卡路里计算</a></li>
+                        <li><a href="diet-record.html" class="text-gray-400 hover:text-white transition">饮食记录</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition">营养报告</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition">个性化推荐</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold mb-4">联系我们</h3>
+                    <ul class="space-y-2">
+                        <li class="text-gray-400">
+                            <i class="fa fa-phone mr-2"></i> 400-123-4567
+                        </li>
+                        <li class="text-gray-400">
+                            <i class="fa fa-envelope mr-2"></i> contact@healthdiet.com
+                        </li>
+                        <li class="text-gray-400">
+                            <i class="fa fa-map-marker mr-2"></i> 北京市朝阳区健康大厦
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
+                <p>© 2025 健康饮食 版权所有 | 京ICP备12345678号</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- 核心JS：调用API获取食谱 -->
+    <script>
+        // Spoonacular API配置
+        const API_KEY = '3c0dc02917f84e0e97da19b1fa6b97ee'; // 替换为你的API Key
+        const BASE_URL = 'https://api.spoonacular.com/recipes';
+        const SEARCH_ENDPOINT = `${BASE_URL}/complexSearch`;
+        const RECIPE_INFO_ENDPOINT = `${BASE_URL}/{id}/information`;
+
+        // 当前分页状态
+        let currentPage = 1;
+        let currentQuery = 'chicken';
+        let currentDiet = '';
+        let currentCuisine = '';
+        let totalResults = 0;
+        const resultsPerPage = 12; // 每页显示12个结果
+
+        // 移动端菜单
+        document.getElementById('menuBtn').addEventListener('click', () => {
+            document.getElementById('mobileMenu').classList.toggle('hidden');
+        });
+
+        // 显示/隐藏加载状态
+        function showLoading(show) {
+            const loadingTip = document.getElementById('loadingTip');
+            if (show) {
+                loadingTip.classList.remove('hidden');
+                document.getElementById('recipeList').innerHTML = '';
+                document.getElementById('noResultTip').classList.add('hidden');
+                document.getElementById('errorTip').classList.add('hidden');
+                document.getElementById('pagination').classList.add('hidden');
+            } else {
+                loadingTip.classList.add('hidden');
+            }
+        }
+
+        // 显示错误信息
+        function showError(message) {
+            const errorTip = document.getElementById('errorTip');
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.textContent = message;
+            errorTip.classList.remove('hidden');
+            document.getElementById('recipeList').innerHTML = '';
+            document.getElementById('pagination').classList.add('hidden');
+        }
+
+        // 构建API请求URL
+        function buildApiUrl(page = 1) {
+            const params = new URLSearchParams({
+                apiKey: API_KEY,
+                query: currentQuery || 'chicken',
+                number: resultsPerPage,
+                offset: (page - 1) * resultsPerPage,
+                addRecipeInformation: true,
+                addRecipeNutrition: true
+            });
+
+            if (currentDiet) params.append('diet', currentDiet);
+            if (currentCuisine) params.append('cuisine', currentCuisine);
+
+            return `${SEARCH_ENDPOINT}?${params.toString()}`;
+        }
+
+        // 获取食谱数据
+        async function fetchRecipes(page = 1) {
+            showLoading(true);
+
+            try {
+                const url = buildApiUrl(page);
+                console.log('Fetching from:', url); // 调试用
+
+                const response = await fetch(url);
+
+                if (!response.ok) {
+                    throw new Error(`API请求失败: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                // 处理结果
+                if (data.results && data.results.length > 0) {
+                    renderRecipes(data.results);
+                    updatePagination(data.totalResults, page);
+                } else {
+                    document.getElementById('noResultTip').classList.remove('hidden');
+                    document.getElementById('recipeList').innerHTML = '';
+                    document.getElementById('pagination').classList.add('hidden');
+                }
+
+                showLoading(false);
+
+            } catch (error) {
+                console.error('获取食谱失败:', error);
+                showError(error.message || '无法连接到食谱服务，请稍后重试');
+                showLoading(false);
+            }
+        }
+
+        // 渲染食谱卡片
+        function renderRecipes(recipes) {
+            const recipeList = document.getElementById('recipeList');
+            recipeList.innerHTML = '';
+
+            recipes.forEach(recipe => {
+                const card = document.createElement('div');
+                card.className = 'recipe-card bg-white rounded-xl shadow-lg overflow-hidden h-full flex flex-col';
+
+                // 计算准备时间
+                const prepTime = recipe.readyInMinutes ? `${recipe.readyInMinutes}分钟` : '未知';
+
+                // 计算卡路里（如果API提供营养信息）
+                let calories = '未知';
+                if (recipe.nutrition && recipe.nutrition.nutrients) {
+                    const calorieNutrient = recipe.nutrition.nutrients.find(n => n.name === 'Calories');
+                    if (calorieNutrient) {
+                        calories = `${Math.round(calorieNutrient.amount)}千卡`;
+                    }
+                }
+
+                card.innerHTML = `
+                    <div class="relative h-48">
+                        <img src="${recipe.image || 'https://images.unsplash.com/photo-1490818387583-1baba5e638af?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80'}" 
+                             alt="${recipe.title}" 
+                             class="w-full h-full object-cover">
+                        <div class="absolute top-3 left-3">
+                            <span class="bg-primary/90 text-white text-xs px-2 py-1 rounded-full">
+                                ${recipe.vegan ? '纯素' : recipe.vegetarian ? '素食' : '常规'}
+                            </span>
+                        </div>
+                        ${recipe.glutenFree ?
+                        '<span class="absolute top-3 right-3 bg-blue-500/90 text-white text-xs px-2 py-1 rounded-full">无麸质</span>' : ''}
+                    </div>
+                    <div class="p-6 flex-grow flex flex-col">
+                        <h3 class="text-xl font-bold text-dark mb-2">${recipe.title}</h3>
+                        
+                        <div class="flex justify-between items-center text-sm text-gray-500 mb-4">
+                            <span><i class="fa fa-clock-o mr-1"></i> ${prepTime}</span>
+                            <span><i class="fa fa-fire mr-1 text-secondary"></i> ${calories}</span>
+                            <span><i class="fa fa-users mr-1"></i> ${recipe.servings || '未知'}</span>
+                        </div>
+                        
+                        <div class="mb-4 flex-grow">
+                            <p class="text-gray-600 text-sm line-clamp-3">${recipe.summary ?
+                        recipe.summary.replace(/<[^>]*>/g, '').substring(0, 150) + '...' :
+                        '暂无描述'}</p>
+                        </div>
+                        
+                        <div class="flex justify-between items-center mt-4">
+                            <a href="${recipe.sourceUrl || '#'}" 
+                               target="_blank" 
+                               class="text-primary hover:text-primary/80 font-medium">
+                                查看食谱 <i class="fa fa-external-link ml-1"></i>
+                            </a>
+                            <button class="text-secondary hover:text-secondary/80 font-medium" 
+                                    onclick="saveRecipeToFavorites(${recipe.id}, '${recipe.title}')">
+                                <i class="fa fa-heart-o mr-1"></i> 收藏
+                            </button>
+                        </div>
+                        
+                        ${recipe.diets && recipe.diets.length > 0 ?
+                        `<div class="mt-4 pt-4 border-t border-gray-100">
+                                <div class="flex flex-wrap gap-1">
+                                    ${recipe.diets.slice(0, 3).map(diet =>
+                            `<span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">${diet}</span>`
+                        ).join('')}
+                                </div>
+                            </div>` : ''
+                    }
+                    </div>
+                `;
+
+                recipeList.appendChild(card);
+            });
+        }
+
+        // 更新分页信息
+        function updatePagination(total, currentPage) {
+            totalResults = total;
+            const pagination = document.getElementById('pagination');
+            const pageInfo = document.getElementById('pageInfo');
+
+            if (totalResults > resultsPerPage) {
+                const totalPages = Math.ceil(totalResults / resultsPerPage);
+                pageInfo.textContent = `第 ${currentPage} 页 / 共 ${totalPages} 页`;
+                pagination.classList.remove('hidden');
+
+                // 更新按钮状态
+                document.getElementById('prevPage').disabled = currentPage <= 1;
+                document.getElementById('nextPage').disabled = currentPage >= totalPages;
+            } else {
+                pagination.classList.add('hidden');
+            }
+        }
+
+        // 搜索食谱
+        function searchRecipes() {
+            currentQuery = document.getElementById('recipeSearchInput').value.trim();
+            currentDiet = document.getElementById('recipeDietSelect').value;
+            currentCuisine = document.getElementById('recipeCuisineSelect').value;
+            currentPage = 1;
+
+            if (!currentQuery) {
+                currentQuery = 'chicken'; // 默认搜索词
+            }
+
+            fetchRecipes(currentPage);
+        }
+
+        // 上一页
+        document.getElementById('prevPage').addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                fetchRecipes(currentPage);
+            }
+        });
+
+        // 下一页
+        document.getElementById('nextPage').addEventListener('click', () => {
+            const totalPages = Math.ceil(totalResults / resultsPerPage);
+            if (currentPage < totalPages) {
+                currentPage++;
+                fetchRecipes(currentPage);
+            }
+        });
+
+        // 绑定搜索事件
+        document.getElementById('searchBtn').addEventListener('click', searchRecipes);
+        document.getElementById('recipeSearchInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') searchRecipes();
+        });
+        document.getElementById('recipeDietSelect').addEventListener('change', searchRecipes);
+        document.getElementById('recipeCuisineSelect').addEventListener('change', searchRecipes);
+
+        // 收藏食谱
+        function saveRecipeToFavorites(recipeId, recipeTitle) {
+            if (confirm(`是否要将 "${recipeTitle}" 加入收藏夹？`)) {
+                // 这里可以添加收藏逻辑，比如保存到localStorage
+                let favorites = JSON.parse(localStorage.getItem('recipeFavorites') || '[]');
+                if (!favorites.some(fav => fav.id === recipeId)) {
+                    favorites.push({ id: recipeId, title: recipeTitle, date: new Date() });
+                    localStorage.setItem('recipeFavorites', JSON.stringify(favorites));
+                    alert('已添加到收藏夹！');
+                } else {
+                    alert('已在收藏夹中！');
+                }
+            }
+        }
+
+        // 页面加载时初始化
+        window.onload = function () {
+            // 检查是否有API Key，如果没有给出提示
+            if (API_KEY === 'YOUR_API_KEY') {
+                showError('请先设置API Key。访问 https://spoonacular.com/food-api 注册获取API Key');
+                return;
+            }
+            fetchRecipes();
+        };
+    </script>
+</body>
+
+</html>

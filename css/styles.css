@@ -1,0 +1,70 @@
+/* 网页背景半透明设置（修正路径，适配HEALTH-DIET结构） */
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  position: relative;
+  z-index: 1;
+}
+
+body::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  /* 核心修正：跳出css文件夹 → 进入images文件夹找图片 */
+  background-image: url("../images/food-bg.jpg");
+  /* 背景图自适应配置 */
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  /* 半透明（0-1可调，0.3是适中的透明度） */
+  opacity: 0.3;
+  /* 背景在内容下方，不遮挡文字/按钮 */
+  z-index: -1;
+  /* 可选：背景固定，滚动页面不移动 */
+  background-attachment: fixed;
+}
+
+/* 自定义动画和补充样式（原有代码不变） */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease forwards;
+}
+
+.carousel-item {
+  display: none;
+}
+
+.carousel-item.active {
+  display: block;
+}
+
+.progress-ring {
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+}
+
+/* 滚动条美化（原有代码不变） */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}

@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>健康饮食 - 饮食记录</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#22c55e',
+            secondary: '#f97316',
+            neutral: '#f8fafc',
+            dark: '#1e293b',
+          },
+        },
+      }
+    }
+  </script>
+</head>
+
+<body class="bg-neutral min-h-screen flex flex-col">
+  <!-- 导航栏 -->
+  <nav class="bg-white shadow-md sticky top-0 z-50">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex justify-between items-center">
+        <a href="index.html" class="text-2xl font-bold text-primary">健康饮食</a>
+
+        <!-- 桌面导航 -->
+        <div class="hidden md:flex space-x-6">
+          <a href="index.html" class="text-dark hover:text-primary font-medium">首页</a>
+          <a href="diet-advice.html" class="text-dark hover:text-primary font-medium">饮食建议</a>
+          <a href="recipe-library.html" class="text-dark hover:text-primary font-medium">食谱库</a>
+          <a href="calorie-calculator.html" class="text-dark hover:text-primary font-medium">卡路里计算</a>
+          <a href="diet-record.html" class="text-primary font-medium border-b-2 border-primary">饮食记录</a>
+          <a href="community.html" class="text-dark hover:text-primary font-medium">美食社区</a>
+        </div>
+
+        <!-- 用户操作 -->
+        <div class="flex items-center space-x-4">
+          <a href="login.html" class="hidden md:block text-dark hover:text-primary font-medium">登录</a>
+          <a href="register.html"
+            class="hidden md:block bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition">注册</a>
+
+          <!-- 移动端菜单按钮 -->
+          <button id="menuBtn" class="md:hidden text-dark text-xl">
+            <i class="fa fa-bars"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 移动端导航菜单 -->
+    <div id="mobileMenu" class="md:hidden hidden bg-white shadow-lg absolute w-full">
+      <div class="container mx-auto px-4 py-3 flex flex-col space-y-4">
+        <a href="index.html" class="text-dark hover:text-primary font-medium py-2 border-b">首页</a>
+        <a href="diet-advice.html" class="text-dark hover:text-primary font-medium py-2 border-b">饮食建议</a>
+        <a href="recipe-library.html" class="text-dark hover:text-primary font-medium py-2 border-b">食谱库</a>
+        <a href="calorie-calculator.html" class="text-dark hover:text-primary font-medium py-2 border-b">卡路里计算</a>
+        <a href="diet-record.html" class="text-primary font-medium py-2 border-b">饮食记录</a>
+        <a href="community.html" class="text-dark hover:text-primary font-medium py-2 border-b">美食社区</a>
+        <div class="flex space-x-4 pt-2">
+          <a href="login.html" class="text-dark hover:text-primary font-medium">登录</a>
+          <a href="register.html"
+            class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition">注册</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- 饮食记录内容 -->
+  <section class="py-12 flex-grow">
+    <div class="container mx-auto px-4">
+      <h2 class="text-3xl font-bold text-center mb-12 text-dark">我的饮食记录</h2>
+
+      <!-- 日期选择器 -->
+      <div class="bg-white rounded-xl shadow-lg p-6 mb-10 max-w-5xl mx-auto">
+        <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+          <div class="flex items-center space-x-4">
+            <button id="prevDay"
+              class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition">
+              <i class="fa fa-chevron-left text-gray-700"></i>
+            </button>
+            <h3 id="currentDate" class="text-xl font-bold text-dark">2025年12月6日 星期六</h3>
+            <button id="nextDay"
+              class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition">
+              <i class="fa fa-chevron-right text-gray-700"></i>
+            </button>
+          </div>
+
+          <div class="flex space-x-4">
+            <button id="todayBtn"
+              class="bg-primary/10 text-primary px-4 py-2 rounded-lg hover:bg-primary/20 transition font-medium">
+              <i class="fa fa-calendar-o mr-2"></i> 今天
+            </button>
+            <button id="addRecordBtn"
+              class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition font-medium">
+              <i class="fa fa-plus mr-2"></i> 添加记录
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 营养摄入概览 -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10 max-w-6xl mx-auto">
+        <!-- 卡路里 -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+          <div class="flex justify-between items-start mb-4">
+            <div>
+              <h4 class="text-gray-500 text-sm font-medium">卡路里</h4>
+              <div class="flex items-end">
+                <span id="calorieIntake" class="text-3xl font-bold text-dark">0</span>
+                <span class="text-gray-500 ml-2 mb-1">千卡</span>
+              </div>
+            </div>
+            <div class="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary">
+              <i class="fa fa-fire"></i>
+            </div>
+          </div>
+          <div class="w-full bg-gray-200 rounded-full h-2 mb-2">
+            <div id="calorieProgress" class="bg-primary h-2 rounded-full" style="width: 0%"></div>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-500">目标：2000千卡</span>
+            <span id="caloriePercent" class="text-primary font-medium">0%</span>
+          </div>
+        </div>
+
+        <!-- 蛋白质 -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+          <div class="flex justify-between items-start mb-4">
+            <div>
+              <h4 class="text-gray-500 text-sm font-medium">蛋白质</h4>
+              <div class="flex items-end">
+                <span id="proteinIntake" class="text-3xl font-bold text-dark">0</span>
+                <span class="text-gray-500 ml-2 mb-1">克</span>
+              </div>
+            </div>
+            <div class="w-10 h-10 bg-blue-50/20 rounded-full flex items-center justify-center text-blue-500">
+              <i class="fa fa-dna"></i>
+            </div>
+          </div>
+          <div class="w-full bg-gray-200 rounded-full h-2 mb-2">
+            <div id="proteinProgress" class="bg-blue-500 h-2 rounded-full" style="width: 0%"></div>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-500">目标：60克</span>
+            <span id="proteinPercent" class="text-blue-500 font-medium">0%</span>
+          </div>
+        </div>
+
+        <!-- 碳水化合物 -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+          <div class="flex justify-between items-start mb-4">
+            <div>
+              <h4 class="text-gray-500 text-sm font-medium">碳水化合物</h4>
+              <div class="flex items-end">
+                <span id="carbsIntake" class="text-3xl font-bold text-dark">0</span>
+                <span class="text-gray-500 ml-2 mb-1">克</span>
+              </div>
+            </div>
+            <div class="w-10 h-10 bg-yellow-50/20 rounded-full flex items-center justify-center text-yellow-500">
+              <i class="fa fa-cube"></i>
+            </div>
+          </div>
+          <div class="w-full bg-gray-200 rounded-full h-2 mb-2">
+            <div id="carbsProgress" class="bg-yellow-500 h-2 rounded-full" style="width: 0%"></div>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-500">目标：300克</span>
+            <span id="carbsPercent" class="text-yellow-500 font-medium">0%</span>
+          </div>
+        </div>
+
+        <!-- 脂肪 -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+          <div class="flex justify-between items-start mb-4">
+            <div>
+              <h4 class="text-gray-500 text-sm font-medium">脂肪</h4>
+              <div class="flex items-end">
+                <span id="fatIntake" class="text-3xl font-bold text-dark">0</span>
+                <span class="text-gray-500 ml-2 mb-1">克</span>
+              </div>
+            </div>
+            <div class="w-10 h-10 bg-red-50/20 rounded-full flex items-center justify-center text-red-500">
+              <i class="fa fa-tint"></i>
+            </div>
+          </div>
+          <div class="w-full bg-gray-200 rounded-full h-2 mb-2">
+            <div id="fatProgress" class="bg-red-500 h-2 rounded-full" style="width: 0%"></div>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-500">目标：60克</span>
+            <span id="fatPercent" class="text-red-500 font-medium">0%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 营养摄入比例图表 -->
+      <div class="bg-white rounded-xl shadow-lg p-6 mb-10 max-w-5xl mx-auto">
+        <h3 class="text-xl font-bold mb-6 text-dark">营养素摄入比例</h3>
+        <div class="flex flex-col md:flex-row items-center justify-center gap-8">
+          <!-- 环形图表 -->
+          <div class="relative w-64 h-64">
+            <svg class="w-full h-full" viewBox="0 0 100 100">
+              <!-- 蛋白质 -->
+              <circle cx="50" cy="50" r="40" fill="none" stroke="#e2e8f0" stroke-width="10"></circle>
+              <circle id="proteinRing" cx="50" cy="50" r="40" fill="none" stroke="#3b82f6" stroke-width="10"
+                stroke-dasharray="251.2" stroke-dashoffset="251.2" class="progress-ring"></circle>
+
+              <!-- 碳水 -->
+              <circle cx="50" cy="50" r="40" fill="none" stroke="#e2e8f0" stroke-width="10"
+                transform="rotate(90 50 50)"></circle>
+              <circle id="carbsRing" cx="50" cy="50" r="40" fill="none" stroke="#eab308" stroke-width="10"
+                stroke-dasharray="251.2" stroke-dashoffset="251.2" class="progress-ring"></circle>
+
+              <!-- 脂肪 -->
+              <circle cx="50" cy="50" r="40" fill="none" stroke="#e2e8f0" stroke-width="10"
+                transform="rotate(198 50 50)"></circle>
+              <circle id="fatRing" cx="50" cy="50" r="40" fill="none" stroke="#ef4444" stroke-width="10"
+                stroke-dasharray="251.2" stroke-dashoffset="251.2" class="progress-ring"></circle>
+            </svg>
+
+            <div class="absolute inset-0 flex flex-col items-center justify-center">
+              <span class="text-2xl font-bold text-dark">今日摄入</span>
+              <span class="text-gray-500">三大营养素比例</span>
+            </div>
+          </div>
+
+          <!-- 图例 -->
+          <div class="space-y-4">
+            <div class="flex items-center">
+              <div class="w-4 h-4 bg-blue-500 rounded-full mr-3"></div>
+              <div class="flex justify-between w-48">
+                <span class="text-gray-700">蛋白质</span>
+                <span id="proteinRatio" class="font-medium text-dark">0%</span>
+              </div>
+            </div>
+            <div class="flex items-center">
+              <div class="w-4 h-4 bg-yellow-500 rounded-full mr-3"></div>
+              <div class="flex justify-between w-48"> <span class="text-gray-700">碳水化合物</span>
+                <span id="carbsRatio" class="font-medium text-dark">0%</span>
+              </div>
+            </div>
+            <div class="flex items-center">
+              <div class="w-4 h-4 bg-red-500 rounded-full mr-3"></div>
+              <div class="flex justify-between w-48">
+                <span class="text-gray-700">脂肪</span>
+                <span id="fatRatio" class="font-medium text-dark">0%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 今日饮食记录列表 -->
+    <div class="bg-white rounded-xl shadow-lg overflow-hidden mb-10 max-w-5xl mx-auto">
+      <!-- 记录标签 -->
+      <div class="flex border-b border-gray-200">
+        <button class="record-tab active px-6 py-4 font-medium text-primary border-b-2 border-primary"
+          data-type="breakfast">早餐</button>
+        <button class="record-tab px-6 py-4 font-medium text-gray-500 hover:text-dark" data-type="lunch">午餐</button>
+        <button class="record-tab px-6 py-4 font-medium text-gray-500 hover:text-dark" data-type="dinner">晚餐</button>
+        <button class="record-tab px-6 py-4 font-medium text-gray-500 hover:text-dark" data-type="snack">加餐</button>
+      </div>
+
+      <!-- 早餐记录 -->
+      <div class="record-content active p-6" id="breakfastRecords">
+        <!-- 由JS动态渲染 -->
+      </div>
+
+      <!-- 午餐记录 -->
+      <div class="record-content hidden p-6" id="lunchRecords">
+        <!-- 由JS动态渲染 -->
+      </div>
+
+      <!-- 晚餐记录 -->
+      <div class="record-content hidden p-6" id="dinnerRecords">
+        <!-- 由JS动态渲染 -->
+      </div>
+
+      <!-- 加餐记录 -->
+      <div class="record-content hidden p-6" id="snackRecords">
+        <!-- 由JS动态渲染 -->
+      </div>
+    </div>
+
+    <!-- 饮食趋势图表（折线图版） -->
+    <div class="bg-white rounded-xl shadow-lg p-6 mb-10 max-w-5xl mx-auto">
+      <h3 class="text-xl font-bold mb-6 text-dark">近7天卡路里摄入趋势</h3>
+      <div class="h-64 relative">
+        <!-- 折线图Canvas -->
+        <canvas id="calorieTrendCanvas" class="w-full h-full"></canvas>
+        <!-- 日期标签容器 -->
+        <div id="dateLabels" class="flex justify-between mt-2 px-8"></div>
+      </div>
+    </div>
+
+    <!-- 添加记录模态框 -->
+    <div id="addRecordModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+      <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div class="p-6 border-b border-gray-200">
+          <div class="flex justify-between items-center">
+            <h3 class="text-xl font-bold text-dark">添加饮食记录</h3>
+            <button id="closeAddModal"
+              class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200 transition">
+              <i class="fa fa-times"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="p-6">
+          <form id="addRecordForm">
+            <!-- 餐次选择 -->
+            <div class="mb-6">
+              <label class="block text-gray-700 mb-2">餐次</label>
+              <div class="grid grid-cols-4 gap-2">
+                <label class="relative">
+                  <input type="radio" name="mealType" value="breakfast" class="peer sr-only" checked>
+                  <span
+                    class="block p-3 text-center border border-gray-300 rounded-lg peer-checked:border-primary peer-checked:bg-primary/5 cursor-pointer">早餐</span>
+                </label>
+                <label class="relative">
+                  <input type="radio" name="mealType" value="lunch" class="peer sr-only">
+                  <span
+                    class="block p-3 text-center border border-gray-300 rounded-lg peer-checked:border-primary peer-checked:bg-primary/5 cursor-pointer">午餐</span>
+                </label>
+                <label class="relative">
+                  <input type="radio" name="mealType" value="dinner" class="peer sr-only">
+                  <span
+                    class="block p-3 text-center border border-gray-300 rounded-lg peer-checked:border-primary peer-checked:bg-primary/5 cursor-pointer">晚餐</span>
+                </label>
+                <label class="relative">
+                  <input type="radio" name="mealType" value="snack" class="peer sr-only">
+                  <span
+                    class="block p-3 text-center border border-gray-300 rounded-lg peer-checked:border-primary peer-checked:bg-primary/5 cursor-pointer">加餐</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- 食物名称 -->
+            <div class="mb-6">
+              <label for="foodName" class="block text-gray-700 mb-2">食物名称</label>
+              <input type="text" id="foodName"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                placeholder="例如：鸡胸肉沙拉、燕麦粥">
+            </div>
+
+            <!-- 热量和营养 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div>
+                <label for="calories" class="block text-gray-700 mb-2">热量 (千卡)</label>
+                <input type="number" id="calories"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="0" min="0">
+              </div>
+              <div>
+                <label for="servingSize" class="block text-gray-700 mb-2">份量 (克)</label>
+                <input type="number" id="servingSize"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg peer-checked:border-primary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="0" min="0">
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+              <div>
+                <label for="protein" class="block text-gray-700 mb-2">蛋白质 (克)</label>
+                <input type="number" id="protein"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="0" min="0">
+              </div>
+              <div>
+                <label for="carbs" class="block text-gray-700 mb-2">碳水 (克)</label>
+                <input type="number" id="carbs"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="0" min="0">
+              </div>
+              <div>
+                <label for="fat" class="block text-gray-700 mb-2">脂肪 (克)</label>
+                <input type="number" id="fat"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="0" min="0">
+              </div>
+            </div>
+
+            <!-- 时间选择 -->
+            <div class="mb-6">
+              <label for="mealTime" class="block text-gray-700 mb-2">进食时间</label>
+              <input type="time" id="mealTime"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                value="08:00">
+            </div>
+
+            <!-- 备注 -->
+            <div class="mb-6">
+              <label for="notes" class="block text-gray-700 mb-2">备注 (可选)</label>
+              <textarea id="notes" rows="3"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                placeholder="添加一些备注信息..."></textarea>
+            </div>
+
+            <!-- 提交按钮 -->
+            <div class="flex space-x-4">
+              <button type="button" id="cancelAddRecord"
+                class="flex-1 bg-gray-100 text-gray-700 py-3 rounded-lg hover:bg-gray-200 transition font-medium">
+                取消
+              </button>
+              <button type="submit"
+                class="flex-1 bg-primary text-white py-3 rounded-lg hover:bg-primary/90 transition font-medium">
+                保存记录
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    </div>
+  </section>
+
+  <!-- 页脚 -->
+  <footer class="bg-dark text-white mt-auto">
+    <div class="container mx-auto px-4 py-12">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div>
+          <h3 class="text-xl font-bold mb-4 text-primary">健康饮食</h3>
+          <p class="text-gray-400 mb-4">关注饮食健康，享受美好生活</p>
+          <div class="flex space-x-4">
+            <a href="#" class="text-gray-400 hover:text-white transition"><i class="fa fa-weixin text-xl"></i></a>
+            <a href="#" class="text-gray-400 hover:text-white transition"><i class="fa fa-weibo text-xl"></i></a>
+            <a href="#" class="text-gray-400 hover:text-white transition"><i class="fa fa-qq text-xl"></i></a>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="text-xl font-bold mb-4">快速链接</h3>
+          <ul class="space-y-2">
+            <li><a href="index.html" class="text-gray-400 hover:text-white transition">首页</a></li>
+            <li><a href="diet-advice.html" class="text-gray-400 hover:text-white transition">饮食建议</a></li>
+            <li><a href="recipe-library.html" class="text-gray-400 hover:text-white transition">食谱库</a></li>
+            <li><a href="community.html" class="text-gray-400 hover:text-white transition">美食社区</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 class="text-xl font-bold mb-4">功能服务</h3>
+          <ul class="space-y-2">
+            <li><a href="calorie-calculator.html" class="text-gray-400 hover:text-white transition">卡路里计算</a></li>
+            <li><a href="diet-record.html" class="text-gray-400 hover:text-white transition">饮食记录</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-white transition">营养报告</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-white transition">个性化推荐</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 class="text-xl font-bold mb-4">联系我们</h3>
+          <ul class="space-y-2">
+            <li class="text-gray-400"><i class="fa fa-phone mr-2"></i> 400-123-4567</li>
+            <li class="text-gray-400"><i class="fa fa-envelope mr-2"></i> contact@healthdiet.com</li>
+            <li class="text-gray-400"><i class="fa fa-map-marker mr-2"></i> 北京市朝阳区健康大厦</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
+        <p>© 2025 健康饮食 版权所有 | 京ICP备12345678号</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+  <script src="js/record.js"></script>
+  <script>
+    // ========== 核心存储逻辑 ==========
+    // 获取当前日期（格式：2025-12-06）
+    function getFormattedDate(date = new Date()) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    // 从localStorage获取记录
+    function getDietRecords() {
+      const records = localStorage.getItem('dietRecords');
+      return records ? JSON.parse(records) : {};
+    }
+
+    // 保存记录到localStorage
+    function saveDietRecord(record) {
+      const records = getDietRecords();
+      const dateKey = getFormattedDate(currentDate);
+
+      // 初始化日期记录
+      if (!records[dateKey]) {
+        records[dateKey] = {
+          breakfast: [],
+          lunch: [],
+          dinner: [],
+          snack: []
+        };
+      }
+
+      // 添加记录到对应餐次
+      records[dateKey][record.mealType].push(record);
+      localStorage.setItem('dietRecords', JSON.stringify(records));
+
+      // 重新渲染页面
+      renderAllRecords();
+      updateNutritionSummary();
+      renderCalorieTrend(); // 渲染折线图
+    }
+
+    // 删除记录
+    function deleteDietRecord(mealType, index) {
+      const records = getDietRecords();
+      const dateKey = getFormattedDate(currentDate);
+
+      if (records[dateKey] && records[dateKey][mealType]) {
+        records[dateKey][mealType].splice(index, 1);
+        localStorage.setItem('dietRecords', JSON.stringify(records));
+        renderAllRecords();
+        updateNutritionSummary();
+        renderCalorieTrend(); // 重新渲染折线图
+      }
+    }
+
+    // ========== 渲染记录列表 ==========
+    function renderRecords(mealType) {
+      const records = getDietRecords();
+      const dateKey = getFormattedDate(currentDate);
+      const mealRecords = records[dateKey]?.[mealType] || [];
+      const container = document.getElementById(`${mealType}Records`);
+
+      // 无记录时显示空状态
+      if (mealRecords.length === 0) {
+        container.innerHTML = `
+        <div class="text-center py-12">
+          <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 mx-auto mb-4">
+            <i class="fa fa-cutlery text-2xl"></i>
+          </div>
+          <h4 class="text-gray-700 font-medium mb-2">暂无${getMealTypeName(mealType)}记录</h4>
+          <p class="text-gray-500 mb-6">点击"添加记录"按钮，记录你的${getMealTypeName(mealType)}</p>
+          <button class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition" onclick="document.getElementById('addRecordBtn').click()">
+            添加${getMealTypeName(mealType)}记录
+          </button>
+        </div>
+      `;
+        return;
+      }
+
+      // 渲染记录列表
+      container.innerHTML = mealRecords.map((record, index) => `
+      <div class="flex items-center justify-between p-4 border border-gray-100 rounded-lg hover:border-primary/30 transition">
+        <div class="flex items-center">
+          <img src="https://picsum.photos/80/80?food=${index + 1}" alt="${record.foodName}" class="w-16 h-16 rounded-lg object-cover mr-4">
+          <div>
+            <h4 class="font-medium text-dark">${record.foodName}</h4>
+            <div class="flex items-center text-sm text-gray-500 mt-1">
+              <span class="mr-4"><i class="fa fa-fire text-secondary mr-1"></i> ${record.calories}千卡</span>
+              <span><i class="fa fa-clock-o mr-1"></i> ${record.mealTime}</span>
+            </div>
+            ${record.notes ? `<p class="text-xs text-gray-500 mt-1">备注：${record.notes}</p>` : ''}
+          </div>
+        </div>
+        <div class="flex space-x-2">
+          <button class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200 transition" onclick="editRecord('${mealType}', ${index})">
+            <i class="fa fa-pencil"></i>
+          </button>
+          <button class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200 transition" onclick="deleteDietRecord('${mealType}', ${index})">
+            <i class="fa fa-trash"></i>
+          </button>
+        </div>
+      </div>
+    `).join('');
+    }
+
+    // 渲染所有餐次记录
+    function renderAllRecords() {
+      ['breakfast', 'lunch', 'dinner', 'snack'].forEach(type => {
+        renderRecords(type);
+      });
+    }
+
+    // 获取餐次名称
+    function getMealTypeName(type) {
+      const map = {
+        breakfast: '早餐',
+        lunch: '午餐',
+        dinner: '晚餐',
+        snack: '加餐'
+      };
+      return map[type] || type;
+    }
+
+    // ========== 更新营养汇总 ==========
+    function updateNutritionSummary() {
+      const records = getDietRecords();
+      const dateKey = getFormattedDate(currentDate);
+      const allMealRecords = records[dateKey] ?
+        [].concat(
+          records[dateKey].breakfast || [],
+          records[dateKey].lunch || [],
+          records[dateKey].dinner || [],
+          records[dateKey].snack || []
+        ) : [];
+
+      // 计算总营养摄入
+      const totals = allMealRecords.reduce((sum, record) => {
+        sum.calories += Number(record.calories) || 0;
+        sum.protein += Number(record.protein) || 0;
+        sum.carbs += Number(record.carbs) || 0;
+        sum.fat += Number(record.fat) || 0;
+        return sum;
+      }, { calories: 0, protein: 0, carbs: 0, fat: 0 });
+
+      // 更新DOM显示
+      // 卡路里
+      document.getElementById('calorieIntake').textContent = totals.calories;
+      const caloriePercent = Math.min(Math.round((totals.calories / 2000) * 100), 100);
+      document.getElementById('calorieProgress').style.width = `${caloriePercent}%`;
+      document.getElementById('caloriePercent').textContent = `${caloriePercent}%`;
+
+      // 蛋白质
+      document.getElementById('proteinIntake').textContent = totals.protein;
+      const proteinPercent = Math.min(Math.round((totals.protein / 60) * 100), 100);
+      document.getElementById('proteinProgress').style.width = `${proteinPercent}%`;
+      document.getElementById('proteinPercent').textContent = `${proteinPercent}%`;
+
+      // 碳水
+      document.getElementById('carbsIntake').textContent = totals.carbs;
+      const carbsPercent = Math.min(Math.round((totals.carbs / 300) * 100), 100);
+      document.getElementById('carbsProgress').style.width = `${carbsPercent}%`;
+      document.getElementById('carbsPercent').textContent = `${carbsPercent}%`;
+
+      // 脂肪
+      document.getElementById('fatIntake').textContent = totals.fat;
+      const fatPercent = Math.min(Math.round((totals.fat / 60) * 100), 100);
+      document.getElementById('fatProgress').style.width = `${fatPercent}%`;
+      document.getElementById('fatPercent').textContent = `${fatPercent}%`;
+
+      // 更新营养素比例（按热量占比）
+      const totalNutritionCalories = (totals.protein * 4) + (totals.carbs * 4) + (totals.fat * 9);
+      if (totalNutritionCalories > 0) {
+        const proteinRatio = Math.round(((totals.protein * 4) / totalNutritionCalories) * 100);
+        const carbsRatio = Math.round(((totals.carbs * 4) / totalNutritionCalories) * 100);
+        const fatRatio = Math.round(((totals.fat * 9) / totalNutritionCalories) * 100);
+
+        document.getElementById('proteinRatio').textContent = `${proteinRatio}%`;
+        document.getElementById('carbsRatio').textContent = `${carbsRatio}%`;
+        document.getElementById('fatRatio').textContent = `${fatRatio}%`;
+
+        // 更新环形图
+        const circumference = 251.2;
+        document.getElementById('proteinRing').style.strokeDashoffset = circumference - (proteinRatio / 100 * circumference);
+        document.getElementById('carbsRing').style.strokeDashoffset = circumference - (carbsRatio / 100 * circumference);
+        document.getElementById('fatRing').style.strokeDashoffset = circumference - (fatRatio / 100 * circumference);
+      }
+    }
+
+    // ========== 日期切换逻辑 ==========
+    const currentDateEl = document.getElementById('currentDate');
+    const prevDayBtn = document.getElementById('prevDay');
+    const nextDayBtn = document.getElementById('nextDay');
+    const todayBtn = document.getElementById('todayBtn');
+
+    let currentDate = new Date();
+
+    // 更新日期显示
+    function updateDateDisplay() {
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth() + 1;
+      const day = currentDate.getDate();
+      const weekDays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+      const weekDay = weekDays[currentDate.getDay()];
+
+      currentDateEl.textContent = `${year}年${month}月${day}日 ${weekDay}`;
+
+      // 切换日期后重新渲染
+      renderAllRecords();
+      updateNutritionSummary();
+      renderCalorieTrend(); // 渲染折线图
+    }
+
+    // 初始化日期显示
+    updateDateDisplay();
+
+    // 前一天
+    prevDayBtn.addEventListener('click', () => {
+      currentDate.setDate(currentDate.getDate() - 1);
+      updateDateDisplay();
+    });
+
+    // 后一天
+    nextDayBtn.addEventListener('click', () => {
+      currentDate.setDate(currentDate.getDate() + 1);
+      updateDateDisplay();
+    });
+
+    // 回到今天
+    todayBtn.addEventListener('click', () => {
+      currentDate = new Date();
+      updateDateDisplay();
+    });
+
+    // ========== 餐次标签切换 ==========
+    const recordTabs = document.querySelectorAll('.record-tab');
+    const recordContents = document.querySelectorAll('.record-content');
+
+    recordTabs.forEach((tab, index) => {
+      tab.addEventListener('click', () => {
+        // 移除所有标签激活状态
+        recordTabs.forEach(t => {
+          t.classList.remove('active', 'text-primary', 'border-b-2', 'border-primary');
+          t.classList.add('text-gray-500');
+        });
+
+        // 添加当前标签激活状态
+        tab.classList.add('active', 'text-primary', 'border-b-2', 'border-primary');
+        tab.classList.remove('text-gray-500');
+
+        // 隐藏所有内容
+        recordContents.forEach(c => {
+          c.classList.add('hidden');
+          c.classList.remove('active');
+        });
+
+        // 显示对应内容
+        recordContents[index].classList.remove('hidden');
+        recordContents[index].classList.add('active');
+      });
+    });
+
+    // ========== 添加记录模态框 ==========
+    const addRecordBtn = document.getElementById('addRecordBtn');
+    const addRecordModal = document.getElementById('addRecordModal');
+    const closeAddModal = document.getElementById('closeAddModal');
+    const cancelAddRecord = document.getElementById('cancelAddRecord');
+    const addRecordForm = document.getElementById('addRecordForm');
+
+    // 打开添加记录模态框
+    addRecordBtn.addEventListener('click', () => {
+      addRecordModal.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    });
+
+    // 关闭添加记录模态框
+    function closeModal() {
+      addRecordModal.classList.add('hidden');
+      document.body.style.overflow = '';
+      // 重置表单
+      addRecordForm.reset();
+    }
+
+    closeAddModal.addEventListener('click', closeModal);
+    cancelAddRecord.addEventListener('click', closeModal);
+
+    // 点击模态框外部关闭
+    addRecordModal.addEventListener('click', (e) => {
+      if (e.target === addRecordModal) {
+        closeModal();
+      }
+    });
+
+    // 提交添加记录表单
+    addRecordForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      // 获取表单数据
+      const mealType = document.querySelector('input[name="mealType"]:checked').value;
+      const foodName = document.getElementById('foodName').value.trim();
+      const calories = document.getElementById('calories').value;
+      const servingSize = document.getElementById('servingSize').value;
+      const protein = document.getElementById('protein').value;
+      const carbs = document.getElementById('carbs').value;
+      const fat = document.getElementById('fat').value;
+      const mealTime = document.getElementById('mealTime').value;
+      const notes = document.getElementById('notes').value.trim();
+
+      // 简单验证
+      if (!foodName) {
+        alert('请输入食物名称');
+        return;
+      }
+
+      if (!calories || calories <= 0) {
+        alert('请输入有效的热量值（大于0）');
+        return;
+      }
+
+      // 构建记录对象
+      const newRecord = {
+        mealType,
+        foodName,
+        calories: Number(calories),
+        servingSize: Number(servingSize) || 0,
+        protein: Number(protein) || 0,
+        carbs: Number(carbs) || 0,
+        fat: Number(fat) || 0,
+        mealTime,
+        notes,
+        id: Date.now() // 唯一ID
+      };
+
+      // 保存记录
+      saveDietRecord(newRecord);
+
+      // 关闭模态框
+      closeModal();
+
+      // 提示成功
+      alert(`已成功添加${getMealTypeName(mealType)}记录：${foodName}`);
+    });
+
+    // ========== 近7天折线图核心逻辑 ==========
+    // 生成近7天日期
+    function getLast7Days() {
+      const days = [];
+      const today = new Date();
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(today.getDate() - i);
+        days.push({
+          dateKey: getFormattedDate(date),
+          display: `${date.getMonth() + 1}/${date.getDate()}`,
+          isToday: i === 0
+        });
+      }
+      return days;
+    }
+
+    // 获取指定日期的总卡路里
+    function getDayTotalCalories(dateKey) {
+      const records = getDietRecords();
+      if (!records[dateKey]) return 0;
+
+      const allMealRecords = [].concat(
+        records[dateKey].breakfast || [],
+        records[dateKey].lunch || [],
+        records[dateKey].dinner || [],
+        records[dateKey].snack || []
+      );
+
+      return allMealRecords.reduce((sum, record) => {
+        sum += Number(record.calories) || 0;
+        return sum;
+      }, 0);
+    }
+
+    // 渲染折线图
+    function renderCalorieTrend() {
+      const canvas = document.getElementById('calorieTrendCanvas');
+      const ctx = canvas.getContext('2d');
+      const dateLabelsContainer = document.getElementById('dateLabels');
+
+      // 清空画布和日期标签
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      dateLabelsContainer.innerHTML = '';
+
+      const last7Days = getLast7Days();
+      // 获取7天的卡路里数据
+      const calorieData = last7Days.map(day => getDayTotalCalories(day.dateKey));
+      // 日期标签
+      const dateLabels = last7Days.map(day => day.display);
+
+      // 绘制日期标签
+      dateLabels.forEach((label, index) => {
+        const labelEl = document.createElement('span');
+        labelEl.className = `text-xs ${last7Days[index].isToday ? 'font-medium text-dark' : 'text-gray-500'}`;
+        labelEl.textContent = label;
+        dateLabelsContainer.appendChild(labelEl);
+      });
+
+      // 画布尺寸适配
+      const padding = 40;
+      const width = canvas.width - padding * 2;
+      const height = canvas.height - padding * 2;
+      const pointWidth = width / (calorieData.length - 1);
+
+      // 计算最大值（适配Y轴）
+      const maxCalorie = Math.max(...calorieData, 2000); // 至少显示到2000千卡
+      const yRatio = height / maxCalorie;
+
+      // 绘制网格线
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 1;
+      // 横向网格线（每500千卡一条）
+      for (let y = 0; y <= maxCalorie; y += 500) {
+        const yPos = canvas.height - padding - (y * yRatio);
+        ctx.beginPath();
+        ctx.moveTo(padding, yPos);
+        ctx.lineTo(canvas.width - padding, yPos);
+        ctx.stroke();
+
+        // 标注千卡数
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '10px sans-serif';
+        ctx.fillText(`${y}`, padding - 30, yPos + 4);
+      }
+
+      // 绘制折线
+      ctx.strokeStyle = '#22c55e';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+
+      // 绘制数据点和连线
+      calorieData.forEach((cal, index) => {
+        const xPos = padding + index * pointWidth;
+        const yPos = canvas.height - padding - (cal * yRatio);
+
+        if (index === 0) {
+          ctx.moveTo(xPos, yPos);
+        } else {
+          ctx.lineTo(xPos, yPos);
+        }
+
+        // 绘制数据点
+        ctx.fillStyle = last7Days[index].isToday ? '#22c55e' : '#ffffff';
+        ctx.strokeStyle = '#22c55e';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(xPos, yPos, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // 标注数值
+        if (cal > 0) {
+          ctx.fillStyle = '#1e293b';
+          ctx.font = '11px sans-serif';
+          ctx.fillText(`${cal}`, xPos - 10, yPos - 10);
+        }
+      });
+      ctx.strokeStyle = '#22c55e';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      // 填充折线下方区域
+      ctx.fillStyle = 'rgba(34, 197, 94, 0.1)';
+      ctx.beginPath();
+      ctx.moveTo(padding, canvas.height - padding);
+      calorieData.forEach((cal, index) => {
+        const xPos = padding + index * pointWidth;
+        const yPos = canvas.height - padding - (cal * yRatio);
+        ctx.lineTo(xPos, yPos);
+      });
+      ctx.lineTo(padding + (calorieData.length - 1) * pointWidth, canvas.height - padding);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // ========== 初始化页面 ==========
+    // 页面加载时渲染记录和营养汇总
+    window.addEventListener('load', () => {
+      renderAllRecords();
+      updateNutritionSummary();
+      renderCalorieTrend(); // 初始化折线图
+
+      // 适配Canvas尺寸
+      const canvas = document.getElementById('calorieTrendCanvas');
+      const container = canvas.parentElement;
+      canvas.width = container.offsetWidth;
+      canvas.height = container.offsetHeight;
+
+      // 窗口大小变化时重新渲染
+      window.addEventListener('resize', () => {
+        canvas.width = container.offsetWidth;
+        canvas.height = container.offsetHeight;
+        renderCalorieTrend();
+      });
+    });
+
+    // 编辑记录（预留方法，可扩展）
+    function editRecord(mealType, index) {
+      alert('编辑功能可在此扩展，当前点击的是：' + getMealTypeName(mealType) + ' 第' + (index + 1) + '条记录');
+    }
+  </script>
+</body>
+
+</html>

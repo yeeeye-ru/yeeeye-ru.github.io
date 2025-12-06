@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>健康饮食 - 饮食建议</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#22c55e',
+            secondary: '#f97316',
+            neutral: '#f8fafc',
+            dark: '#1e293b',
+          },
+        },
+      }
+    }
+  </script>
+</head>
+<body class="bg-neutral min-h-screen flex flex-col">
+  <!-- 导航栏 -->
+  <nav class="bg-white shadow-md sticky top-0 z-50">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex justify-between items-center">
+        <a href="index.html" class="text-2xl font-bold text-primary">健康饮食</a>
+        
+        <!-- 桌面导航 -->
+        <div class="hidden md:flex space-x-6">
+          <a href="index.html" class="text-dark hover:text-primary font-medium">首页</a>
+          <a href="diet-advice.html" class="text-primary font-medium border-b-2 border-primary">饮食建议</a>
+          <a href="recipe-library.html" class="text-dark hover:text-primary font-medium">食谱库</a>
+          <a href="calorie-calculator.html" class="text-dark hover:text-primary font-medium">卡路里计算</a>
+          <a href="diet-record.html" class="text-dark hover:text-primary font-medium">饮食记录</a>
+          <a href="community.html" class="text-dark hover:text-primary font-medium">美食社区</a>
+        </div>
+        
+        <!-- 用户操作 -->
+        <div class="flex items-center space-x-4">
+          <a href="login.html" class="hidden md:block text-dark hover:text-primary font-medium">登录</a>
+          <a href="register.html" class="hidden md:block bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition">注册</a>
+          
+          <!-- 移动端菜单按钮 -->
+          <button id="menuBtn" class="md:hidden text-dark text-xl">
+            <i class="fa fa-bars"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 移动端导航菜单 -->
+    <div id="mobileMenu" class="md:hidden hidden bg-white shadow-lg absolute w-full">
+      <div class="container mx-auto px-4 py-3 flex flex-col space-y-4">
+        <a href="index.html" class="text-dark hover:text-primary font-medium py-2 border-b">首页</a>
+        <a href="diet-advice.html" class="text-primary font-medium py-2 border-b">饮食建议</a>
+        <a href="recipe-library.html" class="text-dark hover:text-primary font-medium py-2 border-b">食谱库</a>
+        <a href="calorie-calculator.html" class="text-dark hover:text-primary font-medium py-2 border-b">卡路里计算</a>
+        <a href="diet-record.html" class="text-dark hover:text-primary font-medium py-2 border-b">饮食记录</a>
+        <a href="community.html" class="text-dark hover:text-primary font-medium py-2 border-b">美食社区</a>
+        <div class="flex space-x-4 pt-2">
+          <a href="login.html" class="text-dark hover:text-primary font-medium">登录</a>
+          <a href="register.html" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition">注册</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- 饮食建议内容 -->
+  <section class="py-12 flex-grow">
+    <div class="container mx-auto px-4">
+      <h2 class="text-3xl font-bold text-center mb-12 text-dark">专业饮食建议</h2>
+      
+      <!-- 建议分类导航 -->
+      <div class="flex flex-wrap justify-center gap-4 mb-10">
+        <button class="advice-tab active bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition" data-tab="general">通用建议</button>
+        <button class="advice-tab bg-white text-dark px-6 py-2 rounded-lg hover:bg-gray-100 transition" data-tab="breakfast">早餐建议</button>
+        <button class="advice-tab bg-white text-dark px-6 py-2 rounded-lg hover:bg-gray-100 transition" data-tab="lunch">午餐建议</button>
+        <button class="advice-tab bg-white text-dark px-6 py-2 rounded-lg hover:bg-gray-100 transition" data-tab="dinner">晚餐建议</button>
+        <button class="advice-tab bg-white text-dark px-6 py-2 rounded-lg hover:bg-gray-100 transition" data-tab="special">特殊人群</button>
+      </div>
+      
+      <!-- 通用建议 -->
+      <div class="advice-content active" id="general-tab">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-5xl mx-auto">
+          <div class="bg-white rounded-xl shadow-lg p-8">
+            <h3 class="text-2xl font-bold mb-6 text-dark flex items-center">
+              <i class="fa fa-heartbeat text-primary mr-3"></i>
+              基础饮食原则
+            </h3>
+            
+            <ul class="space-y-4">
+              <li class="flex items-start">
+                <span class="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold mr-3 flex-shrink-0 mt-1">1</span>
+                <div>
+                  <h4 class="font-bold text-dark">食物多样化</h4>
+                  <p class="text-gray-600">每天摄入谷薯类、蔬菜水果类、畜禽鱼蛋奶类、大豆坚果类等多种食物，平均每天12种以上，每周25种以上。</p>
+                </div>
+              </li>
+              <li class="flex items-start">
+                <span class="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold mr-3 flex-shrink-0 mt-1">2</span>
+                <div>
+                  <h4 class="font-bold text-dark">主食粗细搭配</h4>
+                  <p class="text-gray-600">主食中加入全谷物、杂豆和薯类，占主食摄入量的1/3以上，增加膳食纤维摄入。</p>
+                </div>
+              </li>
+              <li class="flex items-start">
+                <span class="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold mr-3 flex-shrink-0 mt-1">3</span>
+                <div>
+                  <h4 class="font-bold text-dark">多吃蔬菜水果</h4>
+                  <p class="text-gray-600">保证每天摄入300-500克蔬菜，200-350克水果，深色蔬菜占一半以上。</p>
+                </div>
+              </li>
+              <li class="flex items-start">
+                <span class="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold mr-3 flex-shrink-0 mt-1">4</span>
+                <div>
+                  <h4 class="font-bold text-dark">适量摄入蛋白质</h4>
+                  <p class="text-gray-600">每天摄入鱼、禽、蛋、瘦肉，平均每天120-200克，优先选择鱼和禽肉。</p>
+                </div>
+              </li>
+              <li class="flex items-start">
+                <span class="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold mr-3 flex-shrink-0 mt-1">5</span>
+                <div>
+                  <h4 class="font-bold text-dark">少盐少油少糖</h4>
+                  <p class="text-gray-600">每天盐摄入量不超过5克，油摄入量25-30克，添加糖不超过50克，最好控制在25克以下。</p>
+                </div>
+              </li>
+            </ul>
+          </div>
+          
+          <div class="bg-white rounded-xl shadow-lg p-8">
+            <h3 class="text-2xl font-bold mb-6 text-dark flex items-center">
+              <i class="fa fa-clock-o text-primary mr-3"></i>
+              饮食习惯建议
+            </h3>
+            
+            <div class="space-y-6">
+              <div class="flex items-start">
+                <div class="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center text-primary text-xl mr-4 flex-shrink-0">
+                  <i class="fa fa-coffee"></i>
+                </div>
+                <div>
+                  <h4 class="font-bold text-dark">规律进餐</h4>
+                  <p class="text-gray-600">定时定量进食，三餐定时，避免暴饮暴食，每餐七八分饱即可。</p>
+                </div>
+              </div>
+              
+              <div class="flex items-start">
+                <div class="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center text-primary text-xl mr-4 flex-shrink-0">
+                  <i class="fa fa-tint"></i>
+                </div>
+                <div>
+                  <h4 class="font-bold text-dark">足量饮水</h4>
+                  <p class="text-gray-600">每天饮用1500-1700毫升水，优先选择白开水，少喝含糖饮料。</p>
+                </div>
+              </div>
+              
+              <div class="flex items-start">
+                <div class="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center text-primary text-xl mr-4 flex-shrink-0">
+                  <i class="fa fa-cutlery"></i>
+                </div>
+                <div>
+                  <h4 class="font-bold text-dark">细嚼慢咽</h4>
+                  <p class="text-gray-600">每餐进食时间不少于20分钟，细嚼慢咽有助于消化，避免过量进食。</p>
+                </div>
+              </div>
+              
+              <div class="flex items-start">
+                <div class="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center text-primary text-xl mr-4 flex-shrink-0">
+                  <i class="fa fa-moon-o"></i>
+                </div>
+                <div>
+                  <h4 class="font-bold text-dark">晚餐适量</h4>
+                  <p class="text-gray-600">晚餐宜清淡、适量，不宜过饱，睡前2-3小时尽量不再进食。</p>
+                </div>
+              </div>
+              
+              <div class="flex items-start">
+                <div class="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center text-primary text-xl mr-4 flex-shrink-0">
+                  <i class="fa fa-ban"></i>
+                </div>
+                <div>
+                  <h4 class="font-bold text-dark">避免空腹吃刺激性食物</h4>
+                  <p class="text-gray-600">避免空腹食用过冷、过热、过辣等刺激性食物，保护胃肠道健康。</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 膳食宝塔 -->
+        <div class="mt-12 bg-white rounded-xl shadow-lg p-8 max-w-5xl mx-auto">
+          <h3 class="text-2xl font-bold mb-6 text-dark text-center">中国居民平衡膳食宝塔</h3>
+          <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div class="bg-red-50 rounded-lg p-4 text-center">
+              <div class="text-xl font-bold text-red-500 mb-2">油盐</div>
+              <p class="text-gray-600 text-sm">油：25-30g</p>
+              <p class="text-gray-600 text-sm">盐：<5g</p>
+            </div>
+            <div class="bg-purple-50 rounded-lg p-4 text-center">
+              <div class="text-xl font-bold text-purple-500 mb-2">奶豆坚果</div>
+              <p class="text-gray-600 text-sm">奶及奶制品：300g</p>
+              <p class="text-gray-600 text-sm">大豆及坚果：25-35g</p>
+            </div>
+            <div class="bg-orange-50 rounded-lg p-4 text-center">
+              <div class="text-xl font-bold text-orange-500 mb-2">肉鱼蛋</div>
+              <p class="text-gray-600 text-sm">畜禽肉：40-75g</p>
+              <p class="text-gray-600 text-sm">鱼虾：40-75g</p>
+              <p class="text-gray-600 text-sm">蛋类：40-50g</p>
+            </div>
+            <div class="bg-green-50 rounded-lg p-4 text-center">
+              <div class="text-xl font-bold text-green-500 mb-2">蔬菜水果</div>
+              <p class="text-gray-600 text-sm">蔬菜：300-500g</p>
+              <p class="text-gray-600 text-sm">水果：200-350g</p>
+            </div>
+            <div class="bg-yellow-50 rounded-lg p-4 text-center">
+              <div class="text-xl font-bold text-yellow-500 mb-2">谷薯杂豆</div>
+              <p class="text-gray-600 text-sm">谷薯类：250-400g</p>
+              <p class="text-gray-600 text-sm">全谷物：50-150g</p>
+              <p class="text-gray-600 text-sm">杂豆：50-150g</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 早餐建议 -->
+      <div class="advice-content hidden" id="breakfast-tab">
+        <div class="bg-white rounded-xl shadow-lg p-8 max-w-5xl mx-auto">
+          <h3 class="text-2xl font-bold mb-6 text-dark flex items-center">
+            <i class="fa fa-sun-o text-primary mr-3"></i>
+            健康早餐建议
+          </h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div>
+              <h4 class="text-xl font-bold mb-4 text-dark">早餐的重要性</h4>
+              <p class="text-gray-600 mb-4">早餐能为身体补充能量，激活新陈代谢，提高上午的工作和学习效率。不吃早餐容易导致血糖不稳定、注意力不集中，还可能增加胆结石的风险。</p>
+              <p class="text-gray-600">理想的早餐应在起床后30分钟内食用，包含优质蛋白、复合碳水、少量健康脂肪和膳食纤维。</p>
+              
+              <h4 class="text-xl font-bold mt-6 mb-4 text-dark">早餐禁忌</h4>
+              <ul class="space-y-2 text-gray-600">
+                <li class="flex items-center">
+                  <i class="fa fa-times text-red-500 mr-2"></i>
+                  避免只吃精制碳水（如白面包、油条、甜点心）
+                </li>
+                <li class="flex items-center">
+                  <i class="fa fa-times text-red-500 mr-2"></i>
+                  避免空腹喝浓茶、咖啡
+                </li>
+                <li class="flex items-center">
+                  <i class="fa fa-times text-red-500 mr-2"></i>
+                  避免油炸、高油高盐食物
+                </li>
+                <li class="flex items-center">
+                  <i class="fa fa-times text-red-500 mr-2"></i>
+                  避免过量食用甜食
+                </li>
+              </ul>
+            </div>
+            
+            <div>
+              <h4 class="text-xl font-bold mb-4 text-dark">推荐早餐搭配</h4>
+              
+              <div class="space-y-4">
+                <div class="p-4 bg-primary/5 rounded-lg">
+                  <h5 class="font-bold text-dark mb-2">经典营养组合</h5>
+                  <p class="text-gray-600">全麦面包 + 水煮蛋 + 牛奶 + 小番茄</p>
+                </div>
+                
+                <div class="p-4 bg-primary/5 rounded-lg">
+                  <h5 class="font-bold text-dark mb-2">中式健康组合</h5>
+                  <p class="text-gray-600">杂粮粥 + 蒸红薯 + 鸡蛋羹 + 凉拌黄瓜</p>
+                </div>
+                
+                <div class="p-4 bg-primary/5 rounded-lg">
+                  <h5 class="font-bold text-dark mb-2">快捷营养组合</h5>
+                  <p class="text-gray-600">燕麦片 + 坚果 + 香蕉 + 无糖酸奶</p>
+                </div>
+                
+                <div class="p-4 bg-primary/5 rounded-lg">
+                  <h5 class="font-bold text-dark mb-2">减脂早餐组合</h5>
+                  <p class="text-gray-600">蔬菜鸡蛋饼 + 无糖豆浆 + 蓝莓</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 午餐建议 -->
+      <div class="advice-content hidden" id="lunch-tab">
+        <div class="bg-white rounded-xl shadow-lg p-8 max-w-5xl mx-auto">
+          <h3 class="text-2xl font-bold mb-6 text-dark flex items-center">
+            <i class="fa fa-sun-o text-primary mr-3"></i>
+            健康午餐建议
+          </h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div>
+              <h4 class="text-xl font-bold mb-4 text-dark">午餐的营养需求</h4>
+              <p class="text-gray-600 mb-4">午餐是一天中能量和营养摄入的核心，应占全天总热量的40%左右。午餐需要提供足够的能量支持下午的活动，同时保证营养均衡。</p>
+              <p class="text-gray-600">理想的午餐应包含：优质蛋白质（鱼、肉、蛋、豆制品）、复合碳水（杂粮饭、全麦面食）、大量蔬菜（尤其是绿叶蔬菜），少量健康脂肪。</p>
+              
+              <h4 class="text-xl font-bold mt-6 mb-4 text-dark">午餐习惯建议</h4>
+              <ul class="space-y-2 text-gray-600">
+                <li class="flex items-center">
+                  <i class="fa fa-check text-primary mr-2"></i>
+                  午餐时间控制在11:30-13:30之间
+                </li>
+                <li class="flex items-center">
+                  <i class="fa fa-check text-primary mr-2"></i>
+                  进食时间不少于20分钟，细嚼慢咽
+                </li>
+                <li class="flex items-center">
+                  <i class="fa fa-check text-primary mr-2"></i>
+                  餐后适当休息10-15分钟
+                </li>
+                <li class="flex items-center">
+                  <i class="fa fa-check text-primary mr-2"></i>
+                  避免餐后立即剧烈运动
+                </li>
+              </ul>
+            </div>
+            
+            <div>
+              <h4 class="text-xl font-bold mb-4 text-dark">午餐搭配示例</h4>
+              
+              <div class="space-y-4">
+                <div class="p-4 bg-primary/5 rounded-lg">
+                  <h5 class="font-bold text-dark mb-2">均衡营养午餐</h5>
+                  <p class="text-gray-600">杂粮饭 + 清蒸鱼 + 清炒西兰花 + 番茄蛋汤</p>
+                </div>
+                
+                <div class="p-4 bg-primary/5 rounded-lg">
+                  <h5 class="font-bold text-dark mb-2">减脂午餐</h5>
+                  <p class="text-gray-600">鸡胸肉沙拉 + 全麦面包 + 鹰嘴豆 + 橄榄油调味</p>
+                </div>
+                
+                <div class="p-4 bg-primary/5 rounded-lg">
+                  <h5 class="font-bold text-dark mb-2">素食午餐</h5>
+                  <p class="text-gray-600">藜麦饭 + 豆腐炒青菜 + 菌菇汤 + 凉拌海带丝</p>
+                </div>
+                
+                <div class="p-4 bg-primary/5 rounded-lg">
+                  <h5 class="font-bold text-dark mb-2">便捷午餐</h5>
+                  <p class="text-gray-600">全麦三明治（鸡胸肉+生菜+番茄）+ 无糖酸奶 + 苹果</p>
+                </div>
+              </div>
+              
+              <h4 class="text-xl font-bold mt-6 mb-4 text-dark">午餐避坑指南</h4>
+              <ul class="space-y-2 text-gray-600">
+                <li class="flex items-center">
+                  <i class="fa fa-exclamation-triangle text-yellow-500 mr-2"></i>
+                  避免单一主食（纯白米饭/面条）
+                </li>
+                <li class="flex items-center">
+                  <i class="fa fa-exclamation-triangle text-yellow-500 mr-2"></i>
+                  避免高油高盐的外卖快餐
+                </li>
+                <li class="flex items-center">
+                  <i class="fa fa-exclamation-triangle text-yellow-500 mr-2"></i>
+                  避免过量饮酒
+                </li>
+                <li class="flex items-center">
+                  <i class="fa fa-exclamation-triangle text-yellow-500 mr-2"></i>
+                  避免暴饮暴食
+                </li>
+              </ul>
+            </div>
+          </div>        </div>
+      </div>
+      
+      <!-- 晚餐建议 -->
+      <div class="advice-content hidden" id="dinner-tab">
+        <div class="bg-white rounded-xl shadow-lg p-8 max-w-5xl mx-auto">
+          <h3 class="text-2xl font-bold mb-6 text-dark flex items-center">
+            <i class="fa fa-moon-o text-primary mr-3"></i>
+            健康晚餐建议
+          </h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div>
+              <h4 class="text-xl font-bold mb-4 text-dark">晚餐的饮食原则</h4>
+              <p class="text-gray-600 mb-4">晚餐应清淡、适量，热量占全天的30%左右。由于夜间活动量减少，消化功能减弱，晚餐不宜过量或过于油腻，否则容易导致消化不良、体重增加、睡眠质量下降。</p>
+              <p class="text-gray-600">晚餐最佳时间为18:00-19:00，睡前3小时完成进食，给肠胃足够的消化时间。</p>
+              
+              <h4 class="text-xl font-bold mt-6 mb-4 text-dark">晚餐营养配比</h4>
+              <div class="space-y-3 text-gray-600">
+                <div class="flex items-center">
+                  <div class="w-3 h-3 bg-primary rounded-full mr-2"></div>
+                  主食：占晚餐总量的1/4，优选杂粮、薯类
+                </div>
+                <div class="flex items-center">
+                  <div class="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+                  蛋白质：占晚餐总量的1/4，优选鱼、虾、鸡胸肉、豆制品
+                </div>
+                <div class="flex items-center">
+                  <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                  蔬菜：占晚餐总量的1/2，以绿叶蔬菜、菌菇类为主
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <h4 class="text-xl font-bold mb-4 text-dark">推荐晚餐搭配</h4>
+              
+              <div class="space-y-4">
+                <div class="p-4 bg-primary/5 rounded-lg">
+                  <h5 class="font-bold text-dark mb-2">清淡晚餐</h5>
+                  <p class="text-gray-600">小米粥 + 清蒸鲈鱼 + 清炒菠菜 + 凉拌黄瓜</p>
+                </div>
+                
+                <div class="p-4 bg-primary/5 rounded-lg">
+                  <h5 class="font-bold text-dark mb-2">减脂晚餐</h5>
+                  <p class="text-gray-600">蒸红薯 + 鸡胸肉炒西兰花 + 菌菇汤</p>
+                </div>
+                
+                <div class="p-4 bg-primary/5 rounded-lg">
+                  <h5 class="font-bold text-dark mb-2">素食晚餐</h5>
+                  <p class="text-gray-600">杂粮粥 + 麻婆豆腐（少油）+ 清炒油麦菜</p>
+                </div>
+                
+                <div class="p-4 bg-primary/5 rounded-lg">
+                  <h5 class="font-bold text-dark mb-2">快手晚餐</h5>
+                  <p class="text-gray-600">全麦意面 + 番茄炒蛋 + 凉拌紫甘蓝</p>
+                </div>
+              </div>
+              
+              <h4 class="text-xl font-bold mt-6 mb-4 text-dark">晚餐禁忌</h4>
+              <ul class="space-y-2 text-gray-600">
+                <li class="flex items-center">
+                  <i class="fa fa-times text-red-500 mr-2"></i>
+                  避免高油高脂食物（炸鸡、烧烤、肥肉）
+                </li>
+                <li class="flex items-center">
+                  <i class="fa fa-times text-red-500 mr-2"></i>
+                  避免过饱（七八分饱即可）
+                </li>
+                <li class="flex items-center">
+                  <i class="fa fa-times text-red-500 mr-2"></i>
+                  避免吃得过晚（睡前3小时内不宜进食）
+                </li>
+                <li class="flex items-center">
+                  <i class="fa fa-times text-red-500 mr-2"></i>
+                  避免大量饮酒
+                </li>
+                <li class="flex items-center">
+                  <i class="fa fa-times text-red-500 mr-2"></i>
+                  避免甜食过多
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 特殊人群建议 -->
+      <div class="advice-content hidden" id="special-tab">
+        <div class="bg-white rounded-xl shadow-lg p-8 max-w-5xl mx-auto">
+          <h3 class="text-2xl font-bold mb-6 text-dark flex items-center">
+            <i class="fa fa-users text-primary mr-3"></i>
+            特殊人群饮食建议
+          </h3>
+          
+          <div class="space-y-8">
+            <!-- 减脂人群 -->
+            <div class="border-b border-gray-200 pb-6">
+              <h4 class="text-xl font-bold mb-4 text-dark">减脂人群</h4>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <h5 class="font-bold text-dark mb-2">核心原则</h5>
+                  <ul class="space-y-2 text-gray-600">
+                    <li class="flex items-center">
+                      <i class="fa fa-check text-primary mr-2"></i>
+                      控制总热量，制造300-500千卡热量缺口
+                    </li>
+                    <li class="flex items-center">
+                      <i class="fa fa-check text-primary mr-2"></i>
+                      保证蛋白质摄入（每公斤体重1.2-1.6克）
+                    </li>
+                    <li class="flex items-center">
+                      <i class="fa fa-check text-primary mr-2"></i>
+                      选择低GI碳水，控制精制碳水
+                    </li>
+                    <li class="flex items-center">
+                      <i class="fa fa-check text-primary mr-2"></i>
+                      增加膳食纤维摄入，提高饱腹感
+                    </li>
+                  </ul>
+                </div>
+                <div>
+                  <h5 class="font-bold text-dark mb-2">饮食建议</h5>
+                  <ul class="space-y-2 text-gray-600">
+                    <li>主食：糙米、藜麦、燕麦、红薯、玉米</li>
+                    <li>蛋白质：鸡胸肉、鱼虾、瘦牛肉、鸡蛋、豆制品</li>
+                    <li>蔬菜：绿叶蔬菜、菌菇类、瓜茄类（不限量）</li>
+                    <li>烹饪方式：蒸、煮、烤、凉拌，少油少盐</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 增肌人群 -->
+            <div class="border-b border-gray-200 pb-6">
+              <h4 class="text-xl font-bold mb-4 text-dark">增肌人群</h4>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <h5 class="font-bold text-dark mb-2">核心原则</h5>
+                  <ul class="space-y-2 text-gray-600">
+                    <li class="flex items-center">
+                      <i class="fa fa-check text-primary mr-2"></i>
+                      适量热量盈余（200-500千卡）
+                    </li>
+                    <li class="flex items-center">
+                      <i class="fa fa-check text-primary mr-2"></i>
+                      高蛋白饮食（每公斤体重1.6-2.2克）
+                    </li>
+                    <li class="flex items-center">
+                      <i class="fa fa-check text-primary mr-2"></i>
+                      训练后及时补充碳水+蛋白质
+                    </li>
+                    <li class="flex items-center">
+                      <i class="fa fa-check text-primary mr-2"></i>
+                      保证充足的优质脂肪
+                    </li>
+                  </ul>
+                </div>
+                <div>
+                  <h5 class="font-bold text-dark mb-2">饮食建议</h5>
+                  <ul class="space-y-2 text-gray-600">
+                    <li>主食：米饭、面条、土豆、全麦面包（足量）</li>
+                    <li>蛋白质：牛肉、鱼肉、鸡蛋、牛奶、蛋白粉</li>
+                    <li>脂肪：坚果、牛油果、橄榄油、鱼油</li>
+                    <li>加餐：训练后30分钟内补充蛋白+碳水</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 老年人 -->
+            <div class="border-b border-gray-200 pb-6">
+              <h4 class="text-xl font-bold mb-4 text-dark">老年人</h4>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <h5 class="font-bold text-dark mb-2">核心原则</h5>
+                  <ul class="space-y-2 text-gray-600">
+                    <li class="flex items-center">
+                      <i class="fa fa-check text-primary mr-2"></i>
+                      食物细软，易于消化
+                    </li>
+                    <li class="flex items-center">
+                      <i class="fa fa-check text-primary mr-2"></i>
+                      保证优质蛋白，预防肌肉流失
+                    </li>
+                    <li class="flex items-center">
+                      <i class="fa fa-check text-primary mr-2"></i>
+                      控制盐、糖、油摄入
+                    </li>
+                    <li class="flex items-center">
+                      <i class="fa fa-check text-primary mr-2"></i>
+                      少量多餐，避免过饱
+                    </li>
+                  </ul>
+                </div>
+                <div>
+                  <h5 class="font-bold text-dark mb-2">饮食建议</h5>
+                  <ul class="space-y-2 text-gray-600">
+                    <li>主食：软烂的粥、烂面条、蒸蛋羹、豆腐</li>
+                    <li>蛋白质：鱼肉、去皮鸡肉、鸡蛋、牛奶、豆制品</li>
+                    <li>蔬菜：切碎煮软的绿叶蔬菜，避免粗纤维</li>
+                    <li>补充：适量补钙和维生素D，预防骨质疏松</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 糖尿病患者 -->
+            <div>
+              <h4 class="text-xl font-bold mb-4 text-dark">糖尿病患者</h4>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <h5 class="font-bold text-dark mb-2">核心原则</h5>
+                  <ul class="space-y-2 text-gray-600">
+                    <li class="flex items-center">
+                      <i class="fa fa-check text-primary mr-2"></i>
+                      控制总热量，定时定量进餐
+                    </li>
+                    <li class="flex items-center">
+                      <i class="fa fa-check text-primary mr-2"></i>
+                      选择低GI食物，控制碳水摄入
+                    </li>
+                    <li class="flex items-center">
+                      <i class="fa fa-check text-primary mr-2"></i>
+                      增加膳食纤维，延缓血糖上升
+                    </li>
+                    <li class="flex items-center">
+                      <i class="fa fa-check text-primary mr-2"></i>
+                      少食多餐，避免血糖波动过大
+                    </li>
+                  </ul>
+                </div>
+                <div>
+                  <h5 class="font-bold text-dark mb-2">饮食建议</h5>
+                  <ul class="space-y-2 text-gray-600">
+                    <li>主食：杂粮饭、燕麦、荞麦（控制分量）</li>
+                    <li>蛋白质：瘦肉、鱼虾、鸡蛋、豆制品（足量）</li>
+                    <li>蔬菜：绿叶蔬菜、菌菇类（不限量）</li>
+                    <li>禁忌：甜食、含糖饮料、精制碳水、油炸食品</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 页脚 -->
+  <footer class="bg-dark text-white mt-auto">
+    <div class="container mx-auto px-4 py-12">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div>
+          <h3 class="text-xl font-bold mb-4 text-primary">健康饮食</h3>
+          <p class="text-gray-400 mb-4">关注饮食健康，享受美好生活</p>
+          <div class="flex space-x-4">
+            <a href="#" class="text-gray-400 hover:text-white transition"><i class="fa fa-weixin text-xl"></i></a>
+            <a href="#" class="text-gray-400 hover:text-white transition"><i class="fa fa-weibo text-xl"></i></a>
+            <a href="#" class="text-gray-400 hover:text-white transition"><i class="fa fa-qq text-xl"></i></a>
+          </div>
+        </div>
+        
+        <div>
+          <h3 class="text-xl font-bold mb-4">快速链接</h3>
+          <ul class="space-y-2">
+            <li><a href="index.html" class="text-gray-400 hover:text-white transition">首页</a></li>
+            <li><a href="diet-advice.html" class="text-gray-400 hover:text-white transition">饮食建议</a></li>
+            <li><a href="recipe-library.html" class="text-gray-400 hover:text-white transition">食谱库</a></li>
+            <li><a href="community.html" class="text-gray-400 hover:text-white transition">美食社区</a></li>
+          </ul>
+        </div>
+        
+        <div>
+          <h3 class="text-xl font-bold mb-4">功能服务</h3>
+          <ul class="space-y-2">
+            <li><a href="calorie-calculator.html" class="text-gray-400 hover:text-white transition">卡路里计算</a></li>
+            <li><a href="diet-record.html" class="text-gray-400 hover:text-white transition">饮食记录</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-white transition">营养报告</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-white transition">个性化推荐</a></li>
+          </ul>
+        </div>
+        
+        <div>
+          <h3 class="text-xl font-bold mb-4">联系我们</h3>
+          <ul class="space-y-2">
+            <li class="text-gray-400"><i class="fa fa-phone mr-2"></i> 400-123-4567</li>
+            <li class="text-gray-400"><i class="fa fa-envelope mr-2"></i> contact@healthdiet.com</li>
+            <li class="text-gray-400"><i class="fa fa-map-marker mr-2"></i> 北京市朝阳区健康大厦</li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
+        <p>© 2025 健康饮食 版权所有 | 京ICP备12345678号</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+  <script>
+    // 饮食建议标签切换
+    const adviceTabs = document.querySelectorAll('.advice-tab');
+    const adviceContents = document.querySelectorAll('.advice-content');
+    
+    adviceTabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        // 移除所有标签的激活状态
+        adviceTabs.forEach(t => {
+          t.classList.remove('active', 'bg-primary', 'text-white');
+          t.classList.add('bg-white', 'text-dark');
+        });
+        
+        // 添加当前标签的激活状态
+        tab.classList.add('active', 'bg-primary', 'text-white');
+        tab.classList.remove('bg-white', 'text-dark');
+        
+        // 隐藏所有内容
+        adviceContents.forEach(content => {
+          content.classList.add('hidden');
+          content.classList.remove('active');
+        });
+        
+        // 显示对应内容
+        const tabId = tab.getAttribute('data-tab');
+        const activeContent = document.getElementById(`${tabId}-tab`);
+        activeContent.classList.remove('hidden');
+        activeContent.classList.add('active');
+      });
+    });
+  </script>
+</body>
+</html>
