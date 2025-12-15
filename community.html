@@ -90,6 +90,11 @@
     .post-card:hover .delete-post-btn {
       opacity: 1;
     }
+
+    /* 新增：用户选择样式 */
+    .user-selector {
+      margin-bottom: 10px;
+    }
   </style>
 </head>
 
@@ -150,12 +155,9 @@
       <!-- 社区头部 -->
       <div class="bg-white rounded-xl shadow-lg p-6 mb-10 max-w-5xl mx-auto">
         <div class="flex flex-col md:flex-row justify-between items-center gap-4">
-          <div class="flex items-center">
-            <img src="https://picsum.photos/64/64?user=1" alt="我的头像" class="w-12 h-12 rounded-full object-cover mr-4">
-            <div>
-              <h3 class="font-medium text-dark">欢迎来到美食社区</h3>
-              <p class="text-sm text-gray-500">分享你的健康饮食经验，结识志同道合的朋友</p>
-            </div>
+          <!-- 新增：用户选择器（模拟多用户） -->
+          <div class="user-selector w-full md:w-auto" id="currentUserDisplay">
+            <!-- 由JS动态渲染当前用户 -->
           </div>
 
           <button id="publishBtn"
@@ -303,90 +305,148 @@
     </div>
   </footer>
 
+  <!-- 引入社区逻辑JS（替换原有本地逻辑） -->
   <script>
-    // ========== 全局变量 & 初始化 ==========
-    // 帖子数据（持久化存储）
-    let communityPosts = JSON.parse(localStorage.getItem('communityPosts')) || [
-      // 示例帖子
-      {
-        id: 1733500000001,
-        author: '减脂达人',
-        avatar: 'https://picsum.photos/64/64?user=2',
-        content: '分享我的一周减脂餐食谱，每天不重样，好吃又低卡！#减脂餐 #低卡',
-        images: ['https://picsum.photos/300/200?food=1'],
-        likes: 128,
-        comments: 36,
-        shares: 15,
-        postTime: '2小时前',
-        isLiked: false
-      },
-      {
-        id: 1733500000002,
-        author: '健身厨神',
-        avatar: 'https://picsum.photos/64/64?user=3',
-        content: '增肌期必吃的高蛋白早餐，5分钟搞定！#健身餐 #增肌 #早餐',
-        images: ['https://picsum.photos/300/200?food=2'],
-        likes: 256,
-        comments: 48,
-        shares: 22,
-        postTime: '昨天',
-        isLiked: false
-      },
-      {
-        id: 1733500000003,
-        author: '素食主义者',
-        avatar: 'https://picsum.photos/64/64?user=4',
-        content: '超好吃的素食家常菜，无肉也超香！#素食 #家常菜',
-        images: ['https://picsum.photos/300/200?food=3'],
-        likes: 89,
-        comments: 21,
-        shares: 9,
-        postTime: '3天前',
-        isLiked: false
-      }
-    ];
+    // ========== 核心配置 ==========
+    const API_BASE_URL = "https://diet-server-zyr.vercel.app"; 
+    let currentUser = null; // 当前用户（随机生成）
+    let selectedImages = []; // 选中的图片
 
-    // 保存帖子到本地存储
-    function savePostsToLocalStorage() {
-      localStorage.setItem('communityPosts', JSON.stringify(communityPosts));
+    // ========== 随机生成临时用户（避免重复） ==========
+    function generateRandomUser() {
+      const namePrefixes = ["减脂", "健身", "素食", "美食", "轻食", "健康", "厨房"];
+      const nameSuffixes = ["达人", "厨神", "爱好者", "小白", "博主", "专家"];
+      const randomName = `${namePrefixes[Math.floor(Math.random() * namePrefixes.length)]}${nameSuffixes[Math.floor(Math.random() * nameSuffixes.length)]}${Math.floor(Math.random() * 100)}`;
+      const randomAvatarId = Math.floor(Math.random() * 1000);
+      
+      return {
+        id: `user_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+        name: randomName,
+        avatar: `https://picsum.photos/64/64?user=${randomAvatarId}`
+      };
     }
 
-    // ========== 删除帖子核心函数 ==========
-    function deletePost(postId) {
-      // 确认删除
-      if (!confirm('确定要删除这篇帖子吗？删除后无法恢复！')) {
-        return;
+    // ========== 初始化：获取/生成当前用户 ==========
+    function initCurrentUser() {
+      const savedUser = localStorage.getItem("currentUser");
+      if (savedUser) {
+        currentUser = JSON.parse(savedUser);
+      } else {
+        currentUser = generateRandomUser();
+        localStorage.setItem("currentUser", JSON.stringify(currentUser));
       }
-
-      // 过滤掉要删除的帖子
-      communityPosts = communityPosts.filter(post => post.id !== postId);
-      // 保存到本地存储
-      savePostsToLocalStorage();
-      // 重新渲染帖子列表
-      renderCommunityPosts();
-
-      alert('帖子删除成功！');
+      
+      const userDisplayEl = document.getElementById("currentUserDisplay");
+      if (userDisplayEl) {
+        userDisplayEl.innerHTML = `
+          <div class="flex items-center">
+            <label class="text-sm text-gray-600 mr-2">当前身份：</label>
+            <div class="flex items-center">
+              <img src="${currentUser.avatar}" alt="${currentUser.name}" class="w-8 h-8 rounded-full mr-2">
+              <span>${currentUser.name}</span>
+            </div>
+          </div>
+        `;
+      }
     }
 
-    // ========== 基础交互 ==========
-    // 移动端菜单
-    document.getElementById('menuBtn').addEventListener('click', function () {
-      const mobileMenu = document.getElementById('mobileMenu');
-      mobileMenu.classList.toggle('hidden');
-    });
+    // ========== 后端接口：获取所有帖子（跨设备共享） ==========
+    async function fetchPosts() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/posts`);
+        if (!res.ok) throw new Error(`接口返回错误：${res.status}`);
+        const posts = await res.json();
+        return Array.isArray(posts) ? posts : [];
+      } catch (err) {
+        console.error("获取帖子失败", err);
+        alert("获取帖子失败，请稍后重试！");
+        return [];
+      }
+    }
 
-    // ========== 帖子渲染核心函数 ==========
-    function renderCommunityPosts(filterTag = '全部') {
-      const postsContainer = document.getElementById('communityPosts');
+    // ========== 后端接口：添加新帖子 ==========
+    async function addPostToServer(post) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/posts`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(post)
+        });
+        if (!res.ok) throw new Error(`发布失败：${res.status}`);
+        return await res.json();
+      } catch (err) {
+        console.error("发布帖子失败", err);
+        alert("发布失败，请检查网络或后端服务！");
+        return null;
+      }
+    }
 
-      // 筛选帖子
-      let filteredPosts = communityPosts;
-      if (filterTag !== '全部') {
-        filteredPosts = communityPosts.filter(post => post.content.includes(filterTag));
+    // ========== 后端接口：删除帖子（仅自己可删） ==========
+    async function deletePostFromServer(postId) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/posts/${postId}`, {
+          method: "DELETE"
+        });
+        if (!res.ok) throw new Error(`删除失败：${res.status}`);
+        return true;
+      } catch (err) {
+        console.error("删除帖子失败", err);
+        alert("删除失败，请稍后重试！");
+        return false;
+      }
+    }
+
+    // ========== 后端接口：更新帖子（点赞/评论数） ==========
+    async function updatePost(postId, data) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/posts/${postId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data)
+        });
+        if (!res.ok) throw new Error(`更新失败：${res.status}`);
+        return await res.json();
+      } catch (err) {
+        console.error("更新帖子失败", err);
+        alert("操作失败，请稍后重试！");
+        return null;
+      }
+    }
+
+    // ========== 工具函数：格式化帖子时间 ==========
+    function formatPostTime(createdAt) {
+      if (!createdAt) return "未知时间";
+      const now = new Date();
+      const postTime = new Date(createdAt);
+      const diffMs = now - postTime;
+      const diffMin = Math.floor(diffMs / 60000);
+      const diffHour = Math.floor(diffMin / 60);
+      const diffDay = Math.floor(diffHour / 24);
+
+      if (diffMin < 1) return "刚刚";
+      if (diffMin < 60) return `${diffMin}分钟前`;
+      if (diffHour < 24) return `${diffHour}小时前`;
+      if (diffDay < 7) return `${diffDay}天前`;
+      return `${postTime.getMonth() + 1}月${postTime.getDate()}日`;
+    }
+
+    // ========== 渲染社区帖子列表（从后端拉取） ==========
+    async function renderCommunityPosts(filterTag = "全部") {
+      const postsContainer = document.getElementById("communityPosts");
+      if (!postsContainer) return;
+
+      let communityPosts = await fetchPosts();
+
+      // 筛选帖子（兼容标签格式）
+      if (filterTag !== "全部") {
+        const tag = filterTag.replace(/^#/, "");
+        communityPosts = communityPosts.filter(post => 
+          post.content && post.content.includes(`#${tag}`)
+        );
       }
 
       // 空状态处理
-      if (filteredPosts.length === 0) {
+      if (communityPosts.length === 0) {
         postsContainer.innerHTML = `
           <div class="bg-white rounded-xl shadow-lg p-10 text-center">
             <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 mx-auto mb-4">
@@ -399,259 +459,274 @@
             </button>
           </div>
         `;
-        // 空状态发布按钮绑定
-        document.getElementById('emptyPublishBtn').addEventListener('click', () => {
-          document.getElementById('publishModal').classList.remove('hidden');
+        document.getElementById("emptyPublishBtn")?.addEventListener("click", () => {
+          document.getElementById("publishModal")?.classList.remove("hidden");
+          document.body.style.overflow = "hidden";
         });
         return;
       }
 
-      // 渲染帖子列表（新增删除按钮，仅自己发布的帖子显示）
-      postsContainer.innerHTML = filteredPosts.map(post => `
-        <div class="bg-white rounded-xl shadow-lg p-6 mb-6 post-card relative">
-          <!-- 仅自己发布的帖子显示删除按钮 -->
-          ${post.author === '我' ? `
-            <button class="delete-post-btn absolute top-4 right-4 w-8 h-8 bg-red-50 rounded-full flex items-center justify-center text-red-500 hover:bg-red-100 transition" data-post-id="${post.id}">
-              <i class="fa fa-trash"></i>
-            </button>
-          ` : ''}
+      // 渲染帖子
+      postsContainer.innerHTML = communityPosts.map(post => {
+        // 补全默认值
+        post.likes = post.likes || 0;
+        post.comments = post.comments || 0;
+        post.shares = post.shares || 0;
+        post.isLiked = post.isLiked || false;
+        post.images = post.images || [];
 
-          <!-- 作者信息 -->
-          <div class="flex items-center mb-4">
-            <img src="${post.avatar}" alt="${post.author}" class="w-10 h-10 rounded-full mr-3">
-            <div>
-              <h4 class="font-medium text-dark">${post.author}</h4>
-              <p class="text-xs text-gray-500">${post.postTime}</p>
+        // 构建图片HTML
+        let imagesHtml = "";
+        if (post.images.length > 0) {
+          imagesHtml = post.images.length === 1 
+            ? `<div class="mt-4 mb-4"><img src="${post.images[0]}" alt="帖子图片" class="w-full h-64 object-cover rounded-lg"></div>`
+            : `<div class="grid grid-cols-${Math.min(post.images.length, 3)} gap-2 mt-4 mb-4">${post.images.map(img => `<img src="${img}" alt="帖子图片" class="w-full h-32 object-cover rounded-lg">`).join("")}</div>`;
+        }
+
+        // 仅自己的帖子显示删除按钮
+        const deleteBtn = post.authorId === currentUser.id 
+          ? `<button class="delete-post-btn absolute top-4 right-4 w-8 h-8 bg-red-50 rounded-full flex items-center justify-center text-red-500 hover:bg-red-100 transition opacity-0" data-post-id="${post.id}"><i class="fa fa-trash"></i></button>`
+          : "";
+
+        return `
+          <div class="bg-white rounded-xl shadow-lg p-6 mb-6 post-card relative" data-post-id="${post.id}">
+            ${deleteBtn}
+            <!-- 作者信息 -->
+            <div class="flex items-center mb-4">
+              <img src="${post.avatar}" alt="${post.author}" class="w-12 h-12 rounded-full object-cover mr-4">
+              <div>
+                <h4 class="font-medium text-dark">${post.author}</h4>
+                <p class="text-xs text-gray-500">${formatPostTime(post.createdAt)}</p>
+              </div>
+            </div>
+            <!-- 帖子内容 -->
+            <p class="text-gray-700 mb-2">${post.content || ""}</p>
+            <!-- 帖子图片 -->
+            ${imagesHtml}
+            <!-- 互动按钮 -->
+            <div class="flex justify-between items-center pt-4 border-t border-gray-100">
+              <button class="like-btn flex items-center text-gray-500 hover:text-red-500 transition ${post.isLiked ? "text-red-500" : ""}" data-post-id="${post.id}">
+                <i class="fa fa-heart mr-2 ${post.isLiked ? "fa-solid" : "fa-regular"}"></i>
+                <span>${post.likes}</span>
+              </button>
+              <button class="comment-btn flex items-center text-gray-500 hover:text-primary transition" data-post-id="${post.id}">
+                <i class="fa fa-comment mr-2"></i>
+                <span>${post.comments}</span>
+              </button>
+              <button class="share-btn flex items-center text-gray-500 hover:text-blue-500 transition" data-post-id="${post.id}">
+                <i class="fa fa-share-alt mr-2"></i>
+                <span>${post.shares || 0}</span>
+              </button>
+              <button class="collect-btn flex items-center text-gray-500 hover:text-yellow-500 transition" data-post-id="${post.id}">
+                <i class="fa fa-bookmark-o mr-2"></i>
+                <span>收藏</span>
+              </button>
             </div>
           </div>
+        `;
+      }).join("");
 
-          <!-- 帖子内容 -->
-          <div class="mb-4">
-            <p class="text-gray-800">${post.content}</p>
-          </div>
+      // 绑定互动事件
+      bindPostInteractionEvents();
+    }
 
-          <!-- 帖子图片 -->
-          ${post.images.length > 0 ? `
-            <div class="grid grid-cols-${Math.min(post.images.length, 3)} gap-2 mb-4">
-              ${post.images.map(img => `
-                <img src="${img}" alt="帖子图片" class="rounded-lg w-full h-40 object-cover">
-              `).join('')}
-            </div>
-          ` : ''}
+    // ========== 绑定互动事件 ==========
+    function bindPostInteractionEvents() {
+      // 移除旧事件避免重复绑定
+      document.querySelectorAll(".like-btn, .delete-post-btn").forEach(btn => {
+        btn.onclick = null;
+      });
 
-          <!-- 互动按钮 -->
-          <div class="flex items-center justify-between pt-4 border-t border-gray-100">
-            <button class="like-btn flex items-center text-gray-500 hover:text-red-500 transition" data-post-id="${post.id}">
-              <i class="fa fa-heart ${post.isLiked ? 'text-red-500' : ''} mr-2"></i>
-              <span>${post.likes}</span>
-            </button>
-            <button class="comment-btn flex items-center text-gray-500 hover:text-primary transition">
-              <i class="fa fa-comment mr-2"></i>
-              <span>${post.comments}</span>
-            </button>
-            <button class="share-btn flex items-center text-gray-500 hover:text-secondary transition">
-              <i class="fa fa-share mr-2"></i>
-              <span>${post.shares}</span>
-            </button>
-          </div>
-        </div>
-      `).join('');
+      // 点赞
+      document.querySelectorAll(".like-btn").forEach(btn => {
+        btn.addEventListener("click", async function () {
+          const postId = this.dataset.postId;
+          const post = await fetch(`${API_BASE_URL}/posts/${postId}`).then(res => res.json());
+          
+          const newIsLiked = !post.isLiked;
+          const newLikes = newIsLiked ? (post.likes || 0) + 1 : Math.max(0, (post.likes || 0) - 1);
+          
+          await updatePost(postId, { isLiked: newIsLiked, likes: newLikes });
+          await renderCommunityPosts();
+        });
+      });
 
-      // 绑定点赞事件
-      document.querySelectorAll('.like-btn').forEach(btn => {
-        btn.addEventListener('click', function () {
-          const postId = Number(this.dataset.postId);
-          const post = communityPosts.find(p => p.id === postId);
-          if (post) {
-            if (post.isLiked) {
-              post.likes--;
-              post.isLiked = false;
-              this.querySelector('i').classList.remove('text-red-500');
-            } else {
-              post.likes++;
-              post.isLiked = true;
-              this.querySelector('i').classList.add('text-red-500');
+      // 删除帖子
+      document.querySelectorAll(".delete-post-btn").forEach(btn => {
+        btn.addEventListener("click", async function () {
+          const postId = this.dataset.postId;
+          if (confirm("确定删除帖子吗？")) {
+            const success = await deletePostFromServer(postId);
+            if (success) {
+              await renderCommunityPosts();
             }
-            savePostsToLocalStorage();
-            this.querySelector('span').textContent = post.likes;
           }
         });
       });
 
-      // 绑定删除帖子事件
-      document.querySelectorAll('.delete-post-btn').forEach(btn => {
-        btn.addEventListener('click', function () {
-          const postId = Number(this.dataset.postId);
-          deletePost(postId);
+      // 帖子卡片hover显示删除按钮
+      document.querySelectorAll(".post-card").forEach(card => {
+        card.addEventListener("mouseenter", () => {
+          const deleteBtn = card.querySelector(".delete-post-btn");
+          if (deleteBtn) deleteBtn.style.opacity = "1";
+        });
+        card.addEventListener("mouseleave", () => {
+          const deleteBtn = card.querySelector(".delete-post-btn");
+          if (deleteBtn) deleteBtn.style.opacity = "0";
         });
       });
 
-      // 绑定评论/分享事件（示例）
-      document.querySelectorAll('.comment-btn').forEach(btn => {
-        btn.addEventListener('click', () => alert('评论功能可在此扩展'));
+      // 评论/分享/收藏（占位）
+      document.querySelectorAll(".comment-btn").forEach(btn => {
+        btn.addEventListener("click", () => alert("评论功能即将上线～"));
       });
-      document.querySelectorAll('.share-btn').forEach(btn => {
-        btn.addEventListener('click', () => alert('分享功能可在此扩展'));
+      document.querySelectorAll(".share-btn").forEach(btn => {
+        btn.addEventListener("click", () => alert("分享功能即将上线～"));
+      });
+      document.querySelectorAll(".collect-btn").forEach(btn => {
+        btn.addEventListener("click", () => alert("收藏功能即将上线～"));
       });
     }
 
-    // ========== 发布帖子模态框 ==========
-    // 打开模态框
-    document.getElementById('publishBtn').addEventListener('click', function () {
-      document.getElementById('publishModal').classList.remove('hidden');
-    });
+    // ========== 发布新帖子 ==========
+    async function publishNewPost(formData) {
+      if (!formData.content.trim()) return alert("请输入帖子内容");
 
-    // 关闭模态框
-    document.getElementById('closePublishModal').addEventListener('click', function () {
-      document.getElementById('publishModal').classList.add('hidden');
-    });
-    document.getElementById('cancelPublish').addEventListener('click', function () {
-      document.getElementById('publishModal').classList.add('hidden');
-    });
-    // 点击外部关闭
-    document.getElementById('publishModal').addEventListener('click', (e) => {
-      if (e.target === document.getElementById('publishModal')) {
-        document.getElementById('publishModal').classList.add('hidden');
-      }
-    });
-
-    // ========== 图片上传预览 ==========
-    const postImages = document.getElementById('postImages');
-    const imagePreview = document.getElementById('imagePreview');
-    let selectedImages = [];
-
-    postImages.addEventListener('change', function (e) {
-      if (selectedImages.length + e.target.files.length > 9) {
-        alert('最多只能上传9张图片');
-        return;
-      }
-
-      Array.from(e.target.files).forEach(file => {
-        if (!file.type.startsWith('image/')) {
-          alert('请选择图片文件');
-          return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = function (event) {
-          const imgId = `img-${Date.now()}`;
-          selectedImages.push({
-            id: imgId,
-            url: event.target.result,
-            file: file
-          });
-
-          const previewItem = document.createElement('div');
-          previewItem.className = 'preview-item';
-          previewItem.dataset.id = imgId;
-          previewItem.innerHTML = `
-            <img src="${event.target.result}" alt="预览图" class="w-16 h-16 rounded-lg">
-            <div class="remove-img" data-id="${imgId}">
-              <i class="fa fa-times"></i>
-            </div>
-          `;
-          imagePreview.appendChild(previewItem);
-
-          // 删除图片
-          previewItem.querySelector('.remove-img').addEventListener('click', function () {
-            const id = this.dataset.id;
-            selectedImages = selectedImages.filter(img => img.id !== id);
-            previewItem.remove();
-          });
-        };
-        reader.readAsDataURL(file);
-      });
-      postImages.value = ''; // 清空以允许重复选择
-    });
-
-    // ========== 发布帖子提交 ==========
-    document.getElementById('publishPostForm').addEventListener('submit', function (e) {
-      e.preventDefault();
-      const content = document.getElementById('postContent').value.trim();
-
-      if (!content) {
-        alert('请输入帖子内容');
-        return;
-      }
-
-      // 新建帖子
       const newPost = {
-        id: Date.now(),
-        author: '我',
-        avatar: 'https://picsum.photos/64/64?user=1',
-        content: content,
-        images: selectedImages.map(img => img.url),
+        authorId: currentUser.id,
+        author: currentUser.name,
+        avatar: currentUser.avatar,
+        content: formData.content.trim(),
+        images: formData.images || [],
         likes: 0,
         comments: 0,
         shares: 0,
-        postTime: '刚刚',
-        isLiked: false
+        isLiked: false,
+        createdAt: new Date().toISOString()
       };
 
-      // 添加并保存
-      communityPosts.unshift(newPost);
-      savePostsToLocalStorage();
-      renderCommunityPosts();
+      const savedPost = await addPostToServer(newPost);
+      if (savedPost) {
+        document.getElementById("publishModal").classList.add("hidden");
+        document.getElementById("publishPostForm").reset();
+        document.getElementById("imagePreview").innerHTML = "";
+        selectedImages = [];
+        await renderCommunityPosts();
+        alert("帖子发布成功！所有用户都能看到啦～");
+      }
+    }
 
-      // 重置表单
-      document.getElementById('postContent').value = '';
-      imagePreview.innerHTML = '';
-      selectedImages = [];
-      document.getElementById('publishModal').classList.add('hidden');
+    // ========== 图片上传预览 ==========
+    function initImagePreview() {
+      const postImages = document.getElementById("postImages");
+      const imagePreview = document.getElementById("imagePreview");
 
-      alert('帖子发布成功！');
-    });
+      postImages.addEventListener('change', function (e) {
+        if (selectedImages.length + e.target.files.length > 9) {
+          alert('最多只能上传9张图片');
+          return;
+        }
 
-    // ========== 标签筛选 ==========
-    document.querySelectorAll('.community-tag').forEach(tag => {
-      tag.addEventListener('click', function () {
-        // 重置标签样式
-        document.querySelectorAll('.community-tag').forEach(t => {
-          t.classList.remove('active', 'bg-primary', 'text-white');
-          t.classList.add('bg-gray-100', 'text-dark');
-        });
-        // 激活当前标签
-        this.classList.add('active', 'bg-primary', 'text-white');
-        this.classList.remove('bg-gray-100', 'text-dark');
-        // 渲染筛选结果
-        renderCommunityPosts(this.textContent.trim());
-      });
-    });
-
-    // ========== 加载更多 ==========
-    document.getElementById('loadMorePosts').addEventListener('click', function () {
-      this.innerHTML = '<i class="fa fa-spinner fa-spin mr-2"></i> 加载中...';
-      this.disabled = true;
-
-      setTimeout(() => {
-        // 模拟加载更多帖子
-        const morePosts = [
-          {
-            id: Date.now() - 1000,
-            author: '美食爱好者',
-            avatar: 'https://picsum.photos/64/64?user=5',
-            content: '低卡家常菜，好吃不胖！#家常菜 #低卡',
-            images: ['https://picsum.photos/300/200?food=4'],
-            likes: 78,
-            comments: 19,
-            shares: 8,
-            postTime: '4天前',
-            isLiked: false
+        Array.from(e.target.files).forEach(file => {
+          if (!file.type.startsWith('image/')) {
+            alert('请选择图片文件');
+            return;
           }
-        ];
-        communityPosts = [...communityPosts, ...morePosts];
-        savePostsToLocalStorage();
-        renderCommunityPosts();
 
-        this.innerHTML = '加载更多 <i class="fa fa-refresh ml-2"></i>';
-        this.disabled = false;
-        alert('已加载更多帖子！');
-      }, 1500);
-    });
+          const reader = new FileReader();
+          reader.onload = function (event) {
+            const imgId = `img-${Date.now()}`;
+            // 用随机图片链接模拟上传（实际项目需对接图片存储）
+            const randomImgUrl = `https://picsum.photos/800/600?random=${Date.now() + Math.random()}`;
+            selectedImages.push({
+              id: imgId,
+              url: randomImgUrl
+            });
+
+            const previewItem = document.createElement('div');
+            previewItem.className = 'preview-item';
+            previewItem.dataset.id = imgId;
+            previewItem.innerHTML = `
+              <img src="${event.target.result}" alt="预览图" class="w-16 h-16 rounded-lg">
+              <div class="remove-img" data-id="${imgId}">
+                <i class="fa fa-times"></i>
+              </div>
+            `;
+            imagePreview.appendChild(previewItem);
+
+            // 删除图片
+            previewItem.querySelector('.remove-img').addEventListener('click', function () {
+              const id = this.dataset.id;
+              selectedImages = selectedImages.filter(img => img.id !== id);
+              previewItem.remove();
+            });
+          };
+          reader.readAsDataURL(file);
+        });
+        postImages.value = ''; // 清空以允许重复选择
+      });
+    }
 
     // ========== 页面初始化 ==========
-    window.addEventListener('load', function () {
-      renderCommunityPosts();
+    document.addEventListener("DOMContentLoaded", async () => {
+      // 初始化用户
+      initCurrentUser();
+      // 初始化图片预览
+      initImagePreview();
+      // 渲染帖子
+      await renderCommunityPosts();
+
+      // 移动端菜单
+      document.getElementById('menuBtn').addEventListener('click', function () {
+        const mobileMenu = document.getElementById('mobileMenu');
+        mobileMenu.classList.toggle('hidden');
+      });
+
+      // 标签筛选
+      document.querySelectorAll('.community-tag').forEach(tag => {
+        tag.addEventListener('click', async function () {
+          document.querySelectorAll('.community-tag').forEach(t => {
+            t.classList.remove('active', 'bg-primary', 'text-white');
+            t.classList.add('bg-gray-100', 'text-dark');
+          });
+          this.classList.add('active', 'bg-primary', 'text-white');
+          this.classList.remove('bg-gray-100', 'text-dark');
+          await renderCommunityPosts(this.textContent.trim());
+        });
+      });
+
+      // 发布帖子模态框
+      document.getElementById('publishBtn').addEventListener('click', function () {
+        document.getElementById('publishModal').classList.remove('hidden');
+        document.body.style.overflow = "hidden";
+      });
+      document.getElementById('closePublishModal').addEventListener('click', function () {
+        document.getElementById('publishModal').classList.add('hidden');
+        document.body.style.overflow = "";
+      });
+      document.getElementById('cancelPublish').addEventListener('click', function () {
+        document.getElementById('publishModal').classList.add('hidden');
+        document.body.style.overflow = "";
+      });
+      document.getElementById('publishModal').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('publishModal')) {
+          document.getElementById('publishModal').classList.add('hidden');
+          document.body.style.overflow = "";
+        }
+      });
+
+      // 发布帖子提交
+      document.getElementById('publishPostForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const content = document.getElementById('postContent').value.trim();
+        const images = selectedImages.map(img => img.url);
+        await publishNewPost({ content, images });
+      });
+
+      // 加载更多（占位）
+      document.getElementById('loadMorePosts').addEventListener('click', function () {
+        alert("已加载全部帖子～");
+      });
     });
   </script>
 </body>
