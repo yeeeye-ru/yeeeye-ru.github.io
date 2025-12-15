@@ -1,607 +1,467 @@
-// community.js - 美食社区相关功能
+// community.js - 美食社区（跨设备共享最终版）
+// ========== 核心配置 ==========
+// 修复：补充HTTPS协议，确保接口请求正常
+const API_BASE_URL = "https://diet-server-zyr.vercel.app"; 
+let currentUser = null; // 当前用户（随机生成）
 
-// 模拟社区帖子数据
-let communityPosts = [
-  {
-    id: 1,
-    author: '健康达人',
-    avatar: 'https://picsum.photos/64/64?avatar=1',
-    content: '分享我的一周减脂餐搭配，简单又好吃，坚持2周瘦了5斤！#减脂餐 #健康饮食',
-    images: [
-      'https://picsum.photos/800/600?food=1',
-      'https://picsum.photos/800/600?food=2'
-    ],
-    likes: 128,
-    comments: 36,
-    shares: 15,
-    postTime: '2小时前',
-    isLiked: false
-  },
-  {
-    id: 2,
-    author: '素食主义者',
-    avatar: 'https://picsum.photos/64/64?avatar=2',
-    content: '纯素食早餐搭配分享，营养均衡，能量满满💪 #素食 #早餐推荐',
-    images: [
-      'https://picsum.photos/800/600?food=3'
-    ],
-    likes: 89,
-    comments: 24,
-    shares: 8,
-    postTime: '5小时前',
-    isLiked: false
-  },
-  {
-    id: 3,
-    author: '健身教练',
-    avatar: 'https://picsum.photos/64/64?avatar=3',
-    content: '增肌期饮食原则：高蛋白、足量碳水、健康脂肪，附我的一日三餐实拍 #增肌饮食 #健身餐',
-    images: [
-      'https://picsum.photos/800/600?food=4',
-      'https://picsum.photos/800/600?food=5',
-      'https://picsum.photos/800/600?food=6'
-    ],
-    likes: 256,
-    comments: 78,
-    shares: 42,
-    postTime: '昨天',
-    isLiked: true
-  },
-  {
-    id: 4,
-    author: '厨房小白',
-    avatar: 'https://picsum.photos/64/64?avatar=4',
-    content: '第一次尝试做的鸡胸肉沙拉，卖相还不错吧？求大神指点改进建议🙏 #新手下厨 #减脂餐',
-    images: [
-      'https://picsum.photos/800/600?food=7'
-    ],
-    likes: 45,
-    comments: 18,
-    shares: 3,
-    postTime: '3天前',
-    isLiked: false
+// ========== 随机生成临时用户（避免重复） ==========
+function generateRandomUser() {
+  const namePrefixes = ["减脂", "健身", "素食", "美食", "轻食", "健康", "厨房"];
+  const nameSuffixes = ["达人", "厨神", "爱好者", "小白", "博主", "专家"];
+  const randomName = `${namePrefixes[Math.floor(Math.random() * namePrefixes.length)]}${nameSuffixes[Math.floor(Math.random() * nameSuffixes.length)]}${Math.floor(Math.random() * 100)}`;
+  const randomAvatarId = Math.floor(Math.random() * 1000);
+  
+  return {
+    id: `user_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+    name: randomName,
+    avatar: `https://picsum.photos/64/64?user=${randomAvatarId}`
+  };
+}
+
+// ========== 初始化：获取/生成当前用户 ==========
+function initCurrentUser() {
+  const savedUser = localStorage.getItem("currentUser");
+  if (savedUser) {
+    currentUser = JSON.parse(savedUser);
+  } else {
+    currentUser = generateRandomUser();
+    localStorage.setItem("currentUser", JSON.stringify(currentUser));
   }
-];
+  
+  const userDisplayEl = document.getElementById("currentUserDisplay");
+  if (userDisplayEl) {
+    userDisplayEl.innerHTML = `
+      <div class="flex items-center">
+        <img src="${currentUser.avatar}" alt="${currentUser.name}" class="w-8 h-8 rounded-full mr-2">
+        <span>${currentUser.name}</span>
+      </div>
+    `;
+  }
+}
 
-// 模拟评论数据
-const postComments = {
-  1: [
-    {
-      id: 101,
-      author: '减脂小白',
-      avatar: 'https://picsum.photos/64/64?avatar=5',
-      content: '求详细的食谱！看起来好好吃',
-      time: '1小时前',
-      likes: 8
-    },
-    {
-      id: 102,
-      author: '健康达人',
-      avatar: 'https://picsum.photos/64/64?avatar=1',
-      content: '回复 @减脂小白：我已经把食谱发在评论区啦，你可以看看',
-      time: '1小时前',
-      likes: 5
-    }
-  ],
-  2: [
-    {
-      id: 201,
-      author: '素食爱好者',
-      avatar: 'https://picsum.photos/64/64?avatar=6',
-      content: '请问用的是什么燕麦？',
-      time: '3小时前',
-      likes: 3
-    }
-  ]
-};
+// ========== 后端接口：获取所有帖子（跨设备共享） ==========
+async function fetchPosts() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/posts`);
+    // 修复：处理接口返回非JSON的情况
+    if (!res.ok) throw new Error(`接口返回错误：${res.status}`);
+    const posts = await res.json();
+    // 确保返回数组，避免渲染报错
+    return Array.isArray(posts) ? posts : [];
+  } catch (err) {
+    console.error("获取帖子失败", err);
+    alert("获取帖子失败，请稍后重试！");
+    return [];
+  }
+}
 
-// 渲染社区帖子列表
-function renderCommunityPosts() {
-  const postsContainer = document.getElementById('communityPosts');
+// ========== 后端接口：添加新帖子 ==========
+async function addPostToServer(post) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/posts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(post)
+    });
+    if (!res.ok) throw new Error(`发布失败：${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.error("发布帖子失败", err);
+    alert("发布失败，请检查网络或后端服务！");
+    return null;
+  }
+}
+
+// ========== 后端接口：删除帖子（仅自己可删） ==========
+async function deletePostFromServer(postId) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/posts/${postId}`, {
+      method: "DELETE"
+    });
+    if (!res.ok) throw new Error(`删除失败：${res.status}`);
+    return true;
+  } catch (err) {
+    console.error("删除帖子失败", err);
+    alert("删除失败，请稍后重试！");
+    return false;
+  }
+}
+
+// ========== 后端接口：更新帖子（点赞/评论数） ==========
+// 新增：专门用于更新帖子属性的接口
+async function updatePost(postId, data) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/posts/${postId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error(`更新失败：${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.error("更新帖子失败", err);
+    alert("操作失败，请稍后重试！");
+    return null;
+  }
+}
+
+// ========== 后端接口：获取评论 ==========
+async function fetchComments(postId) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/comments?postId=${postId}`);
+    if (!res.ok) throw new Error(`获取评论失败：${res.status}`);
+    const comments = await res.json();
+    return Array.isArray(comments) ? comments : [];
+  } catch (err) {
+    console.error("获取评论失败", err);
+    return [];
+  }
+}
+
+// ========== 后端接口：添加评论 ==========
+async function addCommentToServer(comment) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/comments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(comment)
+    });
+    if (!res.ok) throw new Error(`发布评论失败：${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.error("发布评论失败", err);
+    alert("发布评论失败，请稍后重试！");
+    return null;
+  }
+}
+
+// ========== 渲染社区帖子列表（从后端拉取） ==========
+async function renderCommunityPosts(filterTag = "全部") {
+  const postsContainer = document.getElementById("communityPosts");
   if (!postsContainer) return;
-  
-  // 清空容器
-  postsContainer.innerHTML = '';
-  
-  // 渲染每个帖子
-  communityPosts.forEach(post => {
-    const postEl = document.createElement('div');
-    postEl.className = 'bg-white rounded-xl shadow-lg p-6 mb-6';
-    postEl.dataset.postId = post.id;
-    
+
+  let communityPosts = await fetchPosts();
+
+  // 筛选帖子（兼容标签格式）
+  if (filterTag !== "全部") {
+    const tag = filterTag.replace(/^#/, "");
+    communityPosts = communityPosts.filter(post => 
+      post.content && post.content.includes(`#${tag}`)
+    );
+  }
+
+  // 空状态处理
+  if (communityPosts.length === 0) {
+    postsContainer.innerHTML = `
+      <div class="bg-white rounded-xl shadow-lg p-10 text-center">
+        <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 mx-auto mb-4">
+          <i class="fa fa-newspaper-o text-3xl"></i>
+        </div>
+        <h4 class="text-xl font-medium text-dark mb-2">暂无相关帖子</h4>
+        <p class="text-gray-500 mb-6">快来发布第一条帖子吧！</p>
+        <button id="emptyPublishBtn" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition">
+          <i class="fa fa-pencil mr-2"></i> 发布帖子
+        </button>
+      </div>
+    `;
+    document.getElementById("emptyPublishBtn")?.addEventListener("click", () => {
+      document.getElementById("publishModal")?.classList.remove("hidden");
+      document.body.style.overflow = "hidden";
+    });
+    return;
+  }
+
+  // 渲染帖子（修复HTML语法错误）
+  postsContainer.innerHTML = communityPosts.map(post => {
+    // 补全默认值，避免属性缺失报错
+    post.likes = post.likes || 0;
+    post.comments = post.comments || 0;
+    post.shares = post.shares || 0;
+    post.isLiked = post.isLiked || false;
+    post.images = post.images || [];
+
     // 构建图片HTML
-    let imagesHtml = '';
-    if (post.images && post.images.length > 0) {
-      if (post.images.length === 1) {
-        imagesHtml = `
-          <div class="mt-4 mb-4">
-            <img src="${post.images[0]}" alt="帖子图片" class="w-full h-64 object-cover rounded-lg">
-          </div>
-        `;
-      } else {
-        imagesHtml = `
-          <div class="grid grid-cols-${post.images.length > 3 ? 3 : post.images.length} gap-2 mt-4 mb-4">
-            ${post.images.map(img => `
-              <img src="${img}" alt="帖子图片" class="w-full h-32 object-cover rounded-lg">
-            `).join('')}
-          </div>
-        `;
-      }
+    let imagesHtml = "";
+    if (post.images.length > 0) {
+      imagesHtml = post.images.length === 1 
+        ? `<div class="mt-4 mb-4"><img src="${post.images[0]}" alt="帖子图片" class="w-full h-64 object-cover rounded-lg"></div>`
+        : `<div class="grid grid-cols-${Math.min(post.images.length, 3)} gap-2 mt-4 mb-4">${post.images.map(img => `<img src="${img}" alt="帖子图片" class="w-full h-32 object-cover rounded-lg">`).join("")}</div>`;
     }
-    
-    // 帖子HTML结构
-    postEl.innerHTML = `
-      <!-- 作者信息 -->
-      <div class="flex items-center mb-4">
-        <img src="${post.avatar}" alt="${post.author}" class="w-12 h-12 rounded-full object-cover mr-4">
-        <div>
-          <h4 class="font-medium text-dark">${post.author}</h4>
-          <p class="text-xs text-gray-500">${post.postTime}</p>
+
+    // 仅自己的帖子显示删除按钮
+    const deleteBtn = post.authorId === currentUser.id 
+      ? `<button class="delete-post-btn absolute top-4 right-4 w-8 h-8 bg-red-50 rounded-full flex items-center justify-center text-red-500 hover:bg-red-100 transition opacity-0" data-post-id="${post.id}"><i class="fa fa-trash"></i></button>`
+      : "";
+
+    return `
+      <div class="bg-white rounded-xl shadow-lg p-6 mb-6 post-card relative" data-post-id="${post.id}">
+        ${deleteBtn}
+        <!-- 作者信息 -->
+        <div class="flex items-center mb-4">
+          <img src="${post.avatar}" alt="${post.author}" class="w-12 h-12 rounded-full object-cover mr-4">
+          <div>
+            <h4 class="font-medium text-dark">${post.author}</h4>
+            <p class="text-xs text-gray-500">${formatPostTime(post.createdAt)}</p>
+          </div>
         </div>
-      </div>
-      
-      <!-- 帖子内容 -->
-      <p class="text-gray-700 mb-2">${post.content}</p>
-      
-      <!-- 帖子图片 -->
-      ${imagesHtml}
-      
-      <!-- 互动按钮 -->
-      <div class="flex justify-between items-center pt-4 border-t border-gray-100">
-        <button class="like-btn flex items-center text-gray-500 hover:text-red-500 transition ${post.isLiked ? 'text-red-500' : ''}" data-post-id="${post.id}">
-          <i class="fa fa-heart mr-2 ${post.isLiked ? 'fa-solid' : 'fa-regular'}"></i>
-          <span>${post.likes}</span>
-        </button>
-        <button class="comment-btn flex items-center text-gray-500 hover:text-primary transition" data-post-id="${post.id}">
-          <i class="fa fa-comment mr-2"></i>
-          <span>${post.comments}</span>
-        </button>
-        <button class="share-btn flex items-center text-gray-500 hover:text-blue-500 transition" data-post-id="${post.id}">
-          <i class="fa fa-share-alt mr-2"></i>
-          <span>${post.shares}</span>
-        </button>
-        <button class="collect-btn flex items-center text-gray-500 hover:text-yellow-500 transition" data-post-id="${post.id}">
-          <i class="fa fa-bookmark-o mr-2"></i>
-          <span>收藏</span>
-        </button>
-      </div>
-      
-      <!-- 评论区 (默认隐藏) -->
-      <div class="comments-container mt-4 hidden">
-        <div class="space-y-4 max-h-64 overflow-y-auto pr-2">
-          <!-- 评论会动态加载 -->
-        </div>
-        <div class="mt-4 flex items-center">
-          <img src="https://picsum.photos/64/64?user=1" alt="我的头像" class="w-8 h-8 rounded-full object-cover mr-3">
-          <input type="text" placeholder="发表评论..." class="flex-grow px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary">
-          <button class="ml-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition">
-            发布
+        <!-- 帖子内容 -->
+        <p class="text-gray-700 mb-2">${post.content || ""}</p>
+        <!-- 帖子图片 -->
+        ${imagesHtml}
+        <!-- 互动按钮 -->
+        <div class="flex justify-between items-center pt-4 border-t border-gray-100">
+          <button class="like-btn flex items-center text-gray-500 hover:text-red-500 transition ${post.isLiked ? "text-red-500" : ""}" data-post-id="${post.id}">
+            <i class="fa fa-heart mr-2 ${post.isLiked ? "fa-solid" : "fa-regular"}"></i>
+            <span>${post.likes}</span>
           </button>
+          <button class="comment-btn flex items-center text-gray-500 hover:text-primary transition" data-post-id="${post.id}">
+            <i class="fa fa-comment mr-2"></i>
+            <span>${post.comments}</span>
+          </button>
+          <button class="share-btn flex items-center text-gray-500 hover:text-blue-500 transition" data-post-id="${post.id}">
+            <i class="fa fa-share-alt mr-2"></i>
+            <span>${post.shares || 0}</span>
+          </button>
+          <button class="collect-btn flex items-center text-gray-500 hover:text-yellow-500 transition" data-post-id="${post.id}">
+            <i class="fa fa-bookmark-o mr-2"></i>
+            <span>收藏</span>
+          </button>
+        </div>
+        <!-- 评论区 -->
+        <div class="comments-container mt-4 hidden">
+          <div class="space-y-4 max-h-64 overflow-y-auto pr-2"></div>
+          <div class="mt-4 flex items-center">
+            <img src="${currentUser.avatar}" alt="我的头像" class="w-8 h-8 rounded-full object-cover mr-3">
+            <input type="text" placeholder="发表评论..." class="flex-grow px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary">
+            <button class="ml-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition">发布</button>
+          </div>
         </div>
       </div>
     `;
-    
-    // 添加到容器
-    postsContainer.appendChild(postEl);
-  });
-  
-  // 绑定互动按钮事件
+  }).join("");
+
+  // 渲染完成后重新绑定事件
   bindPostInteractionEvents();
 }
 
-// 绑定帖子互动事件
+// ========== 工具函数：格式化帖子时间 ==========
+function formatPostTime(createdAt) {
+  if (!createdAt) return "未知时间";
+  const now = new Date();
+  const postTime = new Date(createdAt);
+  const diffMs = now - postTime;
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffHour = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHour / 24);
+
+  if (diffMin < 1) return "刚刚";
+  if (diffMin < 60) return `${diffMin}分钟前`;
+  if (diffHour < 24) return `${diffHour}小时前`;
+  if (diffDay < 7) return `${diffDay}天前`;
+  return `${postTime.getMonth() + 1}月${postTime.getDate()}日`;
+}
+
+// ========== 绑定互动事件 ==========
 function bindPostInteractionEvents() {
-  // 点赞按钮
-  document.querySelectorAll('.like-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-      const postId = parseInt(this.dataset.postId);
-      const post = communityPosts.find(p => p.id === postId);
+  // 修复：先移除旧事件，避免重复绑定
+  document.querySelectorAll(".like-btn, .comment-btn, .delete-post-btn, .comments-container button").forEach(btn => {
+    btn.onclick = null;
+  });
+
+  // 点赞
+  document.querySelectorAll(".like-btn").forEach(btn => {
+    btn.addEventListener("click", async function () {
+      const postId = this.dataset.postId; // 修复：不再转数字，保持字符串ID（和后端一致）
+      const post = await fetch(`${API_BASE_URL}/posts/${postId}`).then(res => res.json());
       
-      if (post) {
-        if (post.isLiked) {
-          // 取消点赞
-          post.likes -= 1;
-          post.isLiked = false;
-          this.classList.remove('text-red-500');
-          this.querySelector('i').classList.remove('fa-solid');
-          this.querySelector('i').classList.add('fa-regular');
-        } else {
-          // 点赞
-          post.likes += 1;
-          post.isLiked = true;
-          this.classList.add('text-red-500');
-          this.querySelector('i').classList.remove('fa-regular');
-          this.querySelector('i').classList.add('fa-solid');
-        }
-        
-        // 更新点赞数显示
-        this.querySelector('span').textContent = post.likes;
-      }
+      const newIsLiked = !post.isLiked;
+      const newLikes = newIsLiked ? (post.likes || 0) + 1 : Math.max(0, (post.likes || 0) - 1);
+      
+      // 调用新增的updatePost函数更新
+      await updatePost(postId, { isLiked: newIsLiked, likes: newLikes });
+      // 重新渲染帖子列表
+      await renderCommunityPosts();
     });
   });
-  
-  // 评论按钮
-  document.querySelectorAll('.comment-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-      const postId = parseInt(this.dataset.postId);
-      const postEl = this.closest('[data-post-id]');
-      const commentsContainer = postEl.querySelector('.comments-container');
-      
-      // 切换评论区显示/隐藏
-      if (commentsContainer.classList.contains('hidden')) {
-        // 显示评论区并加载评论
-        commentsContainer.classList.remove('hidden');
-        loadPostComments(postId, commentsContainer.querySelector('.space-y-4'));
+
+  // 评论
+  document.querySelectorAll(".comment-btn").forEach(btn => {
+    btn.addEventListener("click", async function () {
+      const postId = this.dataset.postId;
+      const postEl = this.closest("[data-post-id]");
+      const commentsContainer = postEl.querySelector(".comments-container");
+      const commentsList = commentsContainer.querySelector(".space-y-4");
+
+      if (commentsContainer.classList.contains("hidden")) {
+        commentsContainer.classList.remove("hidden");
+        const comments = await fetchComments(postId);
+        commentsList.innerHTML = comments.length === 0 
+          ? `<div class="text-center py-6 text-gray-500"><i class="fa fa-comment-o text-2xl mb-2"></i><p>暂无评论，快来抢沙发吧！</p></div>`
+          : comments.map(comment => `
+              <div class="flex items-start">
+                <img src="${comment.avatar}" alt="${comment.author}" class="w-8 h-8 rounded-full mr-3 mt-1">
+                <div class="bg-gray-50 rounded-lg p-3 flex-grow">
+                  <div class="flex justify-between items-center mb-1">
+                    <span class="font-medium text-sm">${comment.author}</span>
+                    <span class="text-xs text-gray-500">${formatPostTime(comment.createdAt)}</span>
+                  </div>
+                  <p class="text-sm">${comment.content}</p>
+                </div>
+              </div>
+            `).join("");
       } else {
-        // 隐藏评论区
-        commentsContainer.classList.add('hidden');
+        commentsContainer.classList.add("hidden");
       }
     });
   });
-  
-  // 分享按钮
-  document.querySelectorAll('.share-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-      const postId = parseInt(this.dataset.postId);
-      const post = communityPosts.find(p => p.id === postId);
-      alert(`分享帖子：${post.author} 的 "${post.content.substring(0, 20)}..."`);
-    });
-  });
-  
-  // 收藏按钮
-  document.querySelectorAll('.collect-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-      const isCollected = this.querySelector('i').classList.contains('fa-bookmark');
-      
-      if (isCollected) {
-        // 取消收藏
-        this.querySelector('i').classList.remove('fa-bookmark');
-        this.querySelector('i').classList.add('fa-bookmark-o');
-        this.querySelector('span').textContent = '收藏';
-        this.classList.remove('text-yellow-500');
-        alert('已取消收藏');
-      } else {
-        // 收藏
-        this.querySelector('i').classList.remove('fa-bookmark-o');
-        this.querySelector('i').classList.add('fa-bookmark');
-        this.querySelector('span').textContent = '已收藏';
-        this.classList.add('text-yellow-500');
-        alert('已收藏该帖子');
-      }
-    });
-  });
-  
-  // 评论发布按钮
-  document.querySelectorAll('.comments-container button').forEach(btn => {
-    btn.addEventListener('click', function() {
+
+  // 发布评论
+  document.querySelectorAll(".comments-container button").forEach(btn => {
+    btn.addEventListener("click", async function () {
       const input = this.previousElementSibling;
-      const commentText = input.value.trim();
+      const content = input.value.trim();
+      if (!content) return alert("请输入评论内容");
       
-      if (!commentText) {
-        alert('请输入评论内容');
-        return;
+      const postId = this.closest("[data-post-id]").dataset.postId;
+      const newComment = {
+        postId,
+        author: currentUser.name,
+        avatar: currentUser.avatar,
+        content,
+        createdAt: new Date().toISOString()
+      };
+      
+      const savedComment = await addCommentToServer(newComment);
+      if (savedComment) {
+        // 更新帖子评论数
+        const post = await fetch(`${API_BASE_URL}/posts/${postId}`).then(res => res.json());
+        await updatePost(postId, { comments: (post.comments || 0) + 1 });
+        
+        input.value = "";
+        await renderCommunityPosts();
       }
-      
-      // 模拟发布评论
-      alert(`已发布评论：${commentText}`);
-      input.value = '';
-      
-      // 这里可以添加实际发布评论的逻辑
-      const postId = parseInt(this.closest('[data-post-id]').dataset.postId);
-      addNewComment(postId, {
-        author: '我',
-        avatar: 'https://picsum.photos/64/64?user=1',
-        content: commentText,
-        time: '刚刚',
-        likes: 0
-      });
+    });
+  });
+
+  // 删除帖子
+  document.querySelectorAll(".delete-post-btn").forEach(btn => {
+    btn.addEventListener("click", async function () {
+      const postId = this.dataset.postId;
+      if (confirm("确定删除帖子吗？")) {
+        const success = await deletePostFromServer(postId);
+        if (success) {
+          await renderCommunityPosts();
+        }
+      }
+    });
+  });
+
+  // 帖子卡片hover显示删除按钮
+  document.querySelectorAll(".post-card").forEach(card => {
+    card.addEventListener("mouseenter", () => {
+      const deleteBtn = card.querySelector(".delete-post-btn");
+      if (deleteBtn) deleteBtn.style.opacity = "1";
+    });
+    card.addEventListener("mouseleave", () => {
+      const deleteBtn = card.querySelector(".delete-post-btn");
+      if (deleteBtn) deleteBtn.style.opacity = "0";
     });
   });
 }
 
-// 加载帖子评论
-function loadPostComments(postId, container) {
-  if (!container) return;
-  
-  // 清空容器
-  container.innerHTML = '';
-  
-  // 获取该帖子的评论
-  const comments = postComments[postId] || [];
-  
-  if (comments.length === 0) {
-    container.innerHTML = `
-      <div class="text-center py-6 text-gray-500">
-        <i class="fa fa-comment-o text-2xl mb-2"></i>
-        <p>暂无评论，快来抢沙发吧！</p>
-      </div>
-    `;
-    return;
-  }
-  
-  // 渲染每条评论
-  comments.forEach(comment => {
-    const commentEl = document.createElement('div');
-    commentEl.className = 'flex items-start';
-    commentEl.innerHTML = `
-      <img src="${comment.avatar}" alt="${comment.author}" class="w-8 h-8 rounded-full object-cover mr-3 mt-1 flex-shrink-0">
-      <div class="bg-gray-50 rounded-lg p-3 flex-grow">
-        <div class="flex justify-between items-center mb-1">
-          <span class="font-medium text-sm text-dark">${comment.author}</span>
-          <span class="text-xs text-gray-500">${comment.time}</span>
-        </div>
-        <p class="text-sm text-gray-700">${comment.content}</p>
-        <div class="flex items-center mt-2">
-          <button class="text-xs text-gray-500 hover:text-primary flex items-center">
-            <i class="fa fa-thumbs-up mr-1"></i>
-            <span>${comment.likes || 0}</span>
-          </button>
-          <button class="text-xs text-gray-500 hover:text-primary flex items-center ml-4">
-            <i class="fa fa-reply mr-1"></i>
-            <span>回复</span>
-          </button>
-        </div>
-      </div>
-    `;
-    
-    container.appendChild(commentEl);
-  });
-}
+// ========== 发布新帖子 ==========
+async function publishNewPost(formData) {
+  if (!formData.content.trim()) return alert("请输入帖子内容");
 
-// 添加新评论
-function addNewComment(postId, comment) {
-  // 生成唯一ID
-  comment.id = Date.now();
-  
-  // 如果该帖子没有评论数组，创建一个
-  if (!postComments[postId]) {
-    postComments[postId] = [];
-  }
-  
-  // 添加到评论数组开头
-  postComments[postId].unshift(comment);
-  
-  // 更新对应帖子的评论数
-  const post = communityPosts.find(p => p.id === postId);
-  if (post) {
-    post.comments += 1;
-    
-    // 更新页面上的评论数显示
-    const commentBtn = document.querySelector(`.comment-btn[data-post-id="${postId}"] span`);
-    if (commentBtn) {
-      commentBtn.textContent = post.comments;
-    }
-  }
-  
-  // 重新加载评论
-  const commentsContainer = document.querySelector(`[data-post-id="${postId}"] .comments-container .space-y-4`);
-  if (commentsContainer) {
-    loadPostComments(postId, commentsContainer);
-  }
-}
-
-// 发布新帖子
-function publishNewPost(formData) {
-  // 验证表单数据
-  if (!formData.content || formData.content.trim() === '') {
-    alert('请输入帖子内容');
-    return false;
-  }
-  
-  // 构建新帖子对象
   const newPost = {
-    id: Date.now(),
-    author: '我',
-    avatar: 'https://picsum.photos/64/64?user=1',
+    authorId: currentUser.id,
+    author: currentUser.name,
+    avatar: currentUser.avatar,
     content: formData.content.trim(),
     images: formData.images || [],
     likes: 0,
     comments: 0,
     shares: 0,
-    postTime: '刚刚',
-    isLiked: false
+    isLiked: false,
+    createdAt: new Date().toISOString()
   };
-  
-  // 添加到帖子数组开头
-  communityPosts.unshift(newPost);
-  
-  // 保存到localStorage（模拟）
-  localStorage.setItem('communityPosts', JSON.stringify(communityPosts));
-  
-  // 更新UI
-  renderCommunityPosts();
-  
-  return true;
+
+  const savedPost = await addPostToServer(newPost);
+  if (savedPost) {
+    document.getElementById("publishModal").classList.add("hidden");
+    document.getElementById("publishPostForm").reset();
+    document.getElementById("imagePreview").innerHTML = "";
+    await renderCommunityPosts(); // 重新渲染
+    alert("帖子发布成功！所有用户都能看到啦～");
+  }
 }
 
-// 页面加载时初始化
-document.addEventListener('DOMContentLoaded', () => {
-  // 从localStorage加载帖子数据
-  const savedPosts = localStorage.getItem('communityPosts');
-  if (savedPosts) {
-    try {
-      communityPosts = JSON.parse(savedPosts);
-    } catch (e) {
-      console.error('加载社区帖子失败', e);
-    }
-  }
-  
-  // 渲染帖子列表
-  renderCommunityPosts();
-  
-  // 绑定发布帖子表单
-  const publishForm = document.getElementById('publishPostForm');
-  if (publishForm) {
-    publishForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      
-      const content = document.getElementById('postContent').value;
-      // 模拟图片上传（实际项目中需要处理文件上传）
-      const images = [];
-      const imageInput = document.getElementById('postImages');
-      
-      if (imageInput.files.length > 0) {
-        // 模拟生成图片URL
-        for (let i = 0; i < Math.min(imageInput.files.length, 9); i++) {
-          images.push(`https://picsum.photos/800/600?random=${Date.now() + i}`);
-        }
-      }
-      
-      // 发布帖子
-      const success = publishNewPost({
-        content: content,
-        images: images
+// ========== 页面初始化 ==========
+document.addEventListener("DOMContentLoaded", async () => {
+  initCurrentUser();
+
+  // 初始化渲染帖子
+  await renderCommunityPosts();
+
+  // 标签筛选
+  document.querySelectorAll(".community-tag").forEach(tag => {
+    tag.addEventListener("click", async function () {
+      document.querySelectorAll(".community-tag").forEach(t => {
+        t.classList.remove("active", "bg-primary", "text-white");
+        t.classList.add("bg-gray-100", "text-dark");
       });
-      
-      if (success) {
-        // 关闭发布模态框
-        const publishModal = document.getElementById('publishModal');
-        if (publishModal) {
-          publishModal.classList.add('hidden');
-          document.body.style.overflow = '';
-        }
-        
-        // 重置表单
-        publishForm.reset();
-        
-        alert('帖子发布成功！');
-      }
-    });
-  }
-  
-  // 绑定标签筛选
-  document.querySelectorAll('.community-tag').forEach(tag => {
-    tag.addEventListener('click', function() {
-      // 移除所有标签激活状态
-      document.querySelectorAll('.community-tag').forEach(t => {
-        t.classList.remove('active', 'bg-primary', 'text-white');
-        t.classList.add('bg-gray-100', 'text-dark');
-      });
-      
-      // 添加当前标签激活状态
-      this.classList.add('active', 'bg-primary', 'text-white');
-      this.classList.remove('bg-gray-100', 'text-dark');
-      
-      // 模拟筛选
-      const tagText = this.textContent.trim();
-      if (tagText === '全部') {
-        renderCommunityPosts(); // 显示全部
-      } else {
-        // 筛选包含该标签的帖子
-        const filteredPosts = communityPosts.filter(post => 
-          post.content.includes(`#${tagText.replace(/^#/, '')}`)
-        );
-        
-        // 保存原始帖子
-        const originalPosts = [...communityPosts];
-        
-        // 替换为筛选后的帖子
-        communityPosts = filteredPosts;
-        
-        // 渲染筛选结果
-        renderCommunityPosts();
-        
-        // 恢复原始帖子（实际项目中应该保留筛选状态）
-        setTimeout(() => {
-          communityPosts = originalPosts;
-        }, 0);
-        
-        alert(`已筛选：${tagText} 相关帖子，共 ${filteredPosts.length} 条`);
-      }
+      this.classList.add("active", "bg-primary", "text-white");
+      await renderCommunityPosts(this.textContent.trim());
     });
   });
-  
-  // 绑定发布按钮
-  const publishBtn = document.getElementById('publishBtn');
-  if (publishBtn) {
-    publishBtn.addEventListener('click', () => {
-      const publishModal = document.getElementById('publishModal');
-      if (publishModal) {
-        publishModal.classList.remove('hidden');
-        document.body.style.overflow = 'hidden';
-      }
-    });
-  }
-  
-  // 绑定关闭发布模态框按钮
-  const closePublishModal = document.getElementById('closePublishModal');
-  if (closePublishModal) {
-    closePublishModal.addEventListener('click', () => {
-      const publishModal = document.getElementById('publishModal');
-      if (publishModal) {
-        publishModal.classList.add('hidden');
-        document.body.style.overflow = '';
-      }
-    });
-  }
-  
-  // 绑定取消发布按钮
-  const cancelPublish = document.getElementById('cancelPublish');
-  if (cancelPublish) {
-    cancelPublish.addEventListener('click', () => {
-      const publishModal = document.getElementById('publishModal');
-      if (publishModal) {
-        publishModal.classList.add('hidden');
-        document.body.style.overflow = '';
-      }
-    });
-  }
-  
-  // 点击模态框外部关闭
-  const publishModal = document.getElementById('publishModal');
-  if (publishModal) {
-    publishModal.addEventListener('click', (e) => {
-      if (e.target === publishModal) {
-        publishModal.classList.add('hidden');
-        document.body.style.overflow = '';
-      }
-    });
-  }
-  
-  // 模拟图片上传预览
-  const postImages = document.getElementById('postImages');
-  if (postImages) {
-    postImages.addEventListener('change', function() {
-      const previewContainer = document.getElementById('imagePreview');
-      if (!previewContainer) return;
-      
-      // 清空预览
-      previewContainer.innerHTML = '';
-      
-      // 显示预览
-      for (let i = 0; i < Math.min(this.files.length, 9); i++) {
-        const file = this.files[i];
-        const reader = new FileReader();
-        
-        reader.onload = function(e) {
-          const previewItem = document.createElement('div');
-          previewItem.className = 'relative w-20 h-20 mr-2 mb-2';
-          previewItem.innerHTML = `
-            <img src="${e.target.result}" alt="预览图片" class="w-full h-full object-cover rounded-lg">
-            <button class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs">
-              ×
-            </button>
-          `;
-          
-          // 删除预览图片
-          previewItem.querySelector('button').addEventListener('click', function() {
-            previewItem.remove();
-            // 实际项目中需要处理文件删除逻辑
-          });
-          
-          previewContainer.appendChild(previewItem);
-        };
-        
-        reader.readAsDataURL(file);
-      }
-    });
-  }
-});
 
-// 导出函数供外部使用
-window.community = {
-  renderPosts: renderCommunityPosts,
-  publishPost: publishNewPost,
-  addComment: addNewComment,
-  loadComments: loadPostComments
-};
+  // 发布帖子表单
+  document.getElementById("publishPostForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const content = document.getElementById("postContent").value;
+    const images = [];
+    const imageInput = document.getElementById("postImages");
+    if (imageInput.files.length > 0) {
+      for (let i = 0; i < Math.min(imageInput.files.length, 9); i++) {
+        images.push(`https://picsum.photos/800/600?random=${Date.now() + i}`);
+      }
+    }
+    await publishNewPost({ content, images });
+  });
+
+  // 模态框交互
+  document.getElementById("publishBtn").addEventListener("click", () => {
+    document.getElementById("publishModal").classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+  });
+  document.getElementById("closePublishModal").addEventListener("click", () => {
+    document.getElementById("publishModal").classList.add("hidden");
+    document.body.style.overflow = "";
+  });
+  document.getElementById("cancelPublish").addEventListener("click", () => {
+    document.getElementById("publishModal").classList.add("hidden");
+    document.body.style.overflow = "";
+  });
+  document.getElementById("publishModal").addEventListener("click", (e) => {
+    if (e.target === document.getElementById("publishModal")) {
+      document.getElementById("publishModal").classList.add("hidden");
+      document.body.style.overflow = "";
+    }
+  });
+
+  // 图片预览
+  document.getElementById("postImages").addEventListener("change", function () {
+    const previewContainer = document.getElementById("imagePreview");
+    previewContainer.innerHTML = "";
+    Array.from(this.files).slice(0, 9).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const previewItem = document.createElement("div");
+        previewItem.className = "relative w-20 h-20 mr-2 mb-2";
+        previewItem.innerHTML = `<img src="${e.target.result}" class="w-full h-full rounded-lg"><button class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs" onclick="this.parentElement.remove()">×</button>`;
+        previewContainer.appendChild(previewItem);
+      };
+      reader.readAsDataURL(file);
+    });
+  });
+});
