@@ -356,36 +356,36 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div>
                 <label for="calories" class="block text-gray-700 mb-2">热量 (千卡)</label>
-                <input type="number" id="calories"
+                <input type="number" step="0.01" id="calories"
                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="0" min="0">
+                  placeholder="0.00" min="0">
               </div>
               <div>
                 <label for="servingSize" class="block text-gray-700 mb-2">份量 (克)</label>
-                <input type="number" id="servingSize"
+                <input type="number" step="0.01" id="servingSize"
                   class="w-full px-4 py-3 border border-gray-300 rounded-lg peer-checked:border-primary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="0" min="0">
+                  placeholder="0.00" min="0">
               </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
               <div>
                 <label for="protein" class="block text-gray-700 mb-2">蛋白质 (克)</label>
-                <input type="number" id="protein"
+                <input type="number" step="0.01" id="protein"
                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="0" min="0">
+                  placeholder="0.00" min="0">
               </div>
               <div>
                 <label for="carbs" class="block text-gray-700 mb-2">碳水 (克)</label>
-                <input type="number" id="carbs"
+                <input type="number" step="0.01" id="carbs"
                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="0" min="0">
+                  placeholder="0.00" min="0">
               </div>
               <div>
                 <label for="fat" class="block text-gray-700 mb-2">脂肪 (克)</label>
-                <input type="number" id="fat"
+                <input type="number" step="0.01" id="fat"
                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="0" min="0">
+                  placeholder="0.00" min="0">
               </div>
             </div>
 
@@ -476,6 +476,12 @@
   <script src="js/main.js"></script>
   <script src="js/record.js"></script>
   <script>
+    // ========== 新增：保留两位小数的格式化函数 ==========
+    function formatToTwoDecimals(num) {
+      if (isNaN(Number(num)) || num === undefined || num === null) return '0.00';
+      return Number(num).toFixed(2);
+    }
+
     // ========== 核心存储逻辑 ==========
     // 获取当前日期（格式：2025-12-06）
     function getFormattedDate(date = new Date()) {
@@ -506,8 +512,18 @@
         };
       }
 
+      // 格式化数值为两位小数后保存
+      const formattedRecord = {
+        ...record,
+        calories: formatToTwoDecimals(record.calories),
+        servingSize: formatToTwoDecimals(record.servingSize),
+        protein: formatToTwoDecimals(record.protein),
+        carbs: formatToTwoDecimals(record.carbs),
+        fat: formatToTwoDecimals(record.fat)
+      };
+
       // 添加记录到对应餐次
-      records[dateKey][record.mealType].push(record);
+      records[dateKey][record.mealType].push(formattedRecord);
       localStorage.setItem('dietRecords', JSON.stringify(records));
 
       // 重新渲染页面
@@ -517,16 +533,41 @@
     }
 
     // 删除记录
-    function deleteDietRecord(mealType, index) {
+    function deleteDietRecord(dateKey, mealType, index) {
       const records = getDietRecords();
-      const dateKey = getFormattedDate(currentDate);
 
-      if (records[dateKey] && records[dateKey][mealType]) {
+      if (!dateKey) {
+        dateKey = getFormattedDate(currentDate);
+      }
+
+      if (!records[dateKey] || !records[dateKey][mealType] || !records[dateKey][mealType][index]) {
+        alert('找不到要删除的记录');
+        return;
+      }
+
+      const record = records[dateKey][mealType][index];
+      const foodName = record.foodName || record.name || '此记录';
+
+      if (confirm(`确定要删除「${foodName}」吗？`)) {
+        // 删除记录
         records[dateKey][mealType].splice(index, 1);
+
+        // 如果该餐次没有记录了，可以保持空数组（或者可选清理空日期）
+        // 检查该日期是否完全没有记录
+        const hasAnyRecords = Object.values(records[dateKey]).some(arr => arr.length > 0);
+        if (!hasAnyRecords) {
+          delete records[dateKey]; // 删除空日期
+        }
+
+        // 保存回localStorage
         localStorage.setItem('dietRecords', JSON.stringify(records));
+
+        // 重新渲染页面
         renderAllRecords();
         updateNutritionSummary();
-        renderCalorieTrend(); // 重新渲染折线图
+        renderCalorieTrend();
+
+        alert(`已成功删除「${foodName}」`);
       }
     }
 
@@ -554,30 +595,71 @@
         return;
       }
 
-      // 渲染记录列表
+      // 渲染记录列表（所有数值显示两位小数）
       container.innerHTML = mealRecords.map((record, index) => `
-      <div class="flex items-center justify-between p-4 border border-gray-100 rounded-lg hover:border-primary/30 transition">
-        <div class="flex items-center">
-          <img src="https://picsum.photos/80/80?food=${index + 1}" alt="${record.foodName}" class="w-16 h-16 rounded-lg object-cover mr-4">
-          <div>
-            <h4 class="font-medium text-dark">${record.foodName}</h4>
-            <div class="flex items-center text-sm text-gray-500 mt-1">
-              <span class="mr-4"><i class="fa fa-fire text-secondary mr-1"></i> ${record.calories}千卡</span>
-              <span><i class="fa fa-clock-o mr-1"></i> ${record.mealTime}</span>
-            </div>
-            ${record.notes ? `<p class="text-xs text-gray-500 mt-1">备注：${record.notes}</p>` : ''}
-          </div>
+  <div class="flex items-center justify-between p-4 border border-gray-100 rounded-lg hover:border-primary/30 transition">
+    <div class="flex items-center">
+      <img src="https://picsum.photos/80/80?food=${index + 1}" alt="${record.foodName || record.name || '食物'}" class="w-16 h-16 rounded-lg object-cover mr-4">
+      <div>
+        <h4 class="font-medium text-dark">${record.foodName || record.name || '未命名食物'}</h4>
+        <div class="flex items-center text-sm text-gray-500 mt-1">
+          <span class="mr-4"><i class="fa fa-fire text-secondary mr-1"></i> ${formatToTwoDecimals(record.calories)}千卡</span>
+          <span><i class="fa fa-clock-o mr-1"></i> ${record.mealTime || '未知时间'}</span>
+          ${record.servingSize ? `<span class="ml-4"><i class="fa fa-balance-scale mr-1"></i> ${formatToTwoDecimals(record.servingSize)}克</span>` : ''}
         </div>
-        <div class="flex space-x-2">
-          <button class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200 transition" onclick="editRecord('${mealType}', ${index})">
-            <i class="fa fa-pencil"></i>
-          </button>
-          <button class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200 transition" onclick="deleteDietRecord('${mealType}', ${index})">
-            <i class="fa fa-trash"></i>
-          </button>
+        ${record.notes ? `<p class="text-xs text-gray-500 mt-1">备注：${record.notes}</p>` : ''}
+        <div class="flex mt-2 text-xs text-gray-500">
+          ${record.protein ? `<span class="mr-3">蛋白质: ${formatToTwoDecimals(record.protein)}g</span>` : ''}
+          ${record.carbs ? `<span class="mr-3">碳水: ${formatToTwoDecimals(record.carbs)}g</span>` : ''}
+          ${record.fat ? `<span>脂肪: ${formatToTwoDecimals(record.fat)}g</span>` : ''}
         </div>
       </div>
-    `).join('');
+    </div>
+    <div class="flex space-x-2">
+      <button class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-500 hover:bg-blue-200 transition edit-record-btn" 
+              data-date="${dateKey}" 
+              data-meal-type="${mealType}" 
+              data-index="${index}">
+        <i class="fa fa-pencil"></i>
+      </button>
+      <button class="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center text-red-500 hover:bg-red-200 transition delete-record-btn" 
+              data-date="${dateKey}" 
+              data-meal-type="${mealType}" 
+              data-index="${index}">
+        <i class="fa fa-trash"></i>
+      </button>
+    </div>
+  </div>
+`).join('');
+
+      // 绑定编辑和删除按钮事件
+      container.addEventListener('click', function (e) {
+        // 编辑按钮点击事件
+        if (e.target.closest('.edit-record-btn')) {
+          const btn = e.target.closest('.edit-record-btn');
+          const dateKey = btn.dataset.date;
+          const mealType = btn.dataset.mealType;
+          const index = parseInt(btn.dataset.index);
+
+          if (mealType && dateKey && !isNaN(index)) {
+            editRecord(dateKey, mealType, index);
+          }
+          return;
+        }
+
+        // 删除按钮点击事件
+        if (e.target.closest('.delete-record-btn')) {
+          const btn = e.target.closest('.delete-record-btn');
+          const dateKey = btn.dataset.date;
+          const mealType = btn.dataset.mealType;
+          const index = parseInt(btn.dataset.index);
+
+          if (mealType && dateKey && !isNaN(index)) {
+            deleteDietRecord(dateKey, mealType, index);
+          }
+          return;
+        }
+      });
     }
 
     // 渲染所有餐次记录
@@ -610,50 +692,50 @@
           records[dateKey].snack || []
         ) : [];
 
-      // 计算总营养摄入
+      // 计算总营养摄入（保留两位小数）
       const totals = allMealRecords.reduce((sum, record) => {
-        sum.calories += Number(record.calories) || 0;
-        sum.protein += Number(record.protein) || 0;
-        sum.carbs += Number(record.carbs) || 0;
-        sum.fat += Number(record.fat) || 0;
+        sum.calories = parseFloat(formatToTwoDecimals(sum.calories)) + parseFloat(formatToTwoDecimals(record.calories));
+        sum.protein = parseFloat(formatToTwoDecimals(sum.protein)) + parseFloat(formatToTwoDecimals(record.protein));
+        sum.carbs = parseFloat(formatToTwoDecimals(sum.carbs)) + parseFloat(formatToTwoDecimals(record.carbs));
+        sum.fat = parseFloat(formatToTwoDecimals(sum.fat)) + parseFloat(formatToTwoDecimals(record.fat));
         return sum;
       }, { calories: 0, protein: 0, carbs: 0, fat: 0 });
 
-      // 更新DOM显示
+      // 更新DOM显示（所有数值保留两位小数）
       // 卡路里
-      document.getElementById('calorieIntake').textContent = totals.calories;
-      const caloriePercent = Math.min(Math.round((totals.calories / 2000) * 100), 100);
+      document.getElementById('calorieIntake').textContent = formatToTwoDecimals(totals.calories);
+      const caloriePercent = Math.min(Math.round((totals.calories / 2000) * 10000) / 100, 100); // 百分比保留两位
       document.getElementById('calorieProgress').style.width = `${caloriePercent}%`;
-      document.getElementById('caloriePercent').textContent = `${caloriePercent}%`;
+      document.getElementById('caloriePercent').textContent = `${formatToTwoDecimals(caloriePercent)}%`;
 
       // 蛋白质
-      document.getElementById('proteinIntake').textContent = totals.protein;
-      const proteinPercent = Math.min(Math.round((totals.protein / 60) * 100), 100);
+      document.getElementById('proteinIntake').textContent = formatToTwoDecimals(totals.protein);
+      const proteinPercent = Math.min(Math.round((totals.protein / 60) * 10000) / 100, 100);
       document.getElementById('proteinProgress').style.width = `${proteinPercent}%`;
-      document.getElementById('proteinPercent').textContent = `${proteinPercent}%`;
+      document.getElementById('proteinPercent').textContent = `${formatToTwoDecimals(proteinPercent)}%`;
 
       // 碳水
-      document.getElementById('carbsIntake').textContent = totals.carbs;
-      const carbsPercent = Math.min(Math.round((totals.carbs / 300) * 100), 100);
+      document.getElementById('carbsIntake').textContent = formatToTwoDecimals(totals.carbs);
+      const carbsPercent = Math.min(Math.round((totals.carbs / 300) * 10000) / 100, 100);
       document.getElementById('carbsProgress').style.width = `${carbsPercent}%`;
-      document.getElementById('carbsPercent').textContent = `${carbsPercent}%`;
+      document.getElementById('carbsPercent').textContent = `${formatToTwoDecimals(carbsPercent)}%`;
 
       // 脂肪
-      document.getElementById('fatIntake').textContent = totals.fat;
-      const fatPercent = Math.min(Math.round((totals.fat / 60) * 100), 100);
+      document.getElementById('fatIntake').textContent = formatToTwoDecimals(totals.fat);
+      const fatPercent = Math.min(Math.round((totals.fat / 60) * 10000) / 100, 100);
       document.getElementById('fatProgress').style.width = `${fatPercent}%`;
-      document.getElementById('fatPercent').textContent = `${fatPercent}%`;
+      document.getElementById('fatPercent').textContent = `${formatToTwoDecimals(fatPercent)}%`;
 
-      // 更新营养素比例（按热量占比）
+      // 更新营养素比例（按热量占比，保留两位小数）
       const totalNutritionCalories = (totals.protein * 4) + (totals.carbs * 4) + (totals.fat * 9);
       if (totalNutritionCalories > 0) {
-        const proteinRatio = Math.round(((totals.protein * 4) / totalNutritionCalories) * 100);
-        const carbsRatio = Math.round(((totals.carbs * 4) / totalNutritionCalories) * 100);
-        const fatRatio = Math.round(((totals.fat * 9) / totalNutritionCalories) * 100);
+        const proteinRatio = Math.round(((totals.protein * 4) / totalNutritionCalories) * 10000) / 100;
+        const carbsRatio = Math.round(((totals.carbs * 4) / totalNutritionCalories) * 10000) / 100;
+        const fatRatio = Math.round(((totals.fat * 9) / totalNutritionCalories) * 10000) / 100;
 
-        document.getElementById('proteinRatio').textContent = `${proteinRatio}%`;
-        document.getElementById('carbsRatio').textContent = `${carbsRatio}%`;
-        document.getElementById('fatRatio').textContent = `${fatRatio}%`;
+        document.getElementById('proteinRatio').textContent = `${formatToTwoDecimals(proteinRatio)}%`;
+        document.getElementById('carbsRatio').textContent = `${formatToTwoDecimals(carbsRatio)}%`;
+        document.getElementById('fatRatio').textContent = `${formatToTwoDecimals(fatRatio)}%`;
 
         // 更新环形图
         const circumference = 251.2;
@@ -793,15 +875,15 @@
         return;
       }
 
-      // 构建记录对象
+      // 构建记录对象（数值已通过formatToTwoDecimals格式化）
       const newRecord = {
         mealType,
         foodName,
-        calories: Number(calories),
-        servingSize: Number(servingSize) || 0,
-        protein: Number(protein) || 0,
-        carbs: Number(carbs) || 0,
-        fat: Number(fat) || 0,
+        calories: formatToTwoDecimals(calories),
+        servingSize: formatToTwoDecimals(servingSize),
+        protein: formatToTwoDecimals(protein),
+        carbs: formatToTwoDecimals(carbs),
+        fat: formatToTwoDecimals(fat),
         mealTime,
         notes,
         id: Date.now() // 唯一ID
@@ -816,6 +898,286 @@
       // 提示成功
       alert(`已成功添加${getMealTypeName(mealType)}记录：${foodName}`);
     });
+
+    // ========== 编辑记录功能 ==========
+    // 编辑记录
+    function editRecord(dateKey, mealType, index) {
+      const records = getDietRecords();
+      if (!records[dateKey] || !records[dateKey][mealType] || !records[dateKey][mealType][index]) {
+        alert('找不到要编辑的记录');
+        return;
+      }
+
+      const record = records[dateKey][mealType][index];
+
+      // 创建编辑模态框
+      const editModal = document.createElement('div');
+      editModal.id = 'editRecordModal';
+      editModal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-50';
+
+      // 获取当前日期显示格式
+      const date = new Date(dateKey);
+      const displayDate = `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
+
+      editModal.innerHTML = `
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div class="p-6 border-b border-gray-200">
+            <div class="flex justify-between items-center">
+              <h3 class="text-xl font-bold text-dark">编辑饮食记录</h3>
+              <button id="closeEditModal"
+                class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200 transition">
+                <i class="fa fa-times"></i>
+              </button>
+            </div>
+            <p class="text-gray-600 mt-2">${displayDate} - ${getMealTypeName(mealType)}</p>
+          </div>
+
+          <div class="p-6">
+            <form id="editRecordForm">
+              <input type="hidden" id="editDateKey" value="${dateKey}">
+              <input type="hidden" id="editMealType" value="${mealType}">
+              <input type="hidden" id="editIndex" value="${index}">
+              
+              <!-- 餐次选择 -->
+              <div class="mb-6">
+                <label class="block text-gray-700 mb-2">餐次</label>
+                <div class="grid grid-cols-4 gap-2">
+                  <label class="relative">
+                    <input type="radio" name="editMealType" value="breakfast" class="peer sr-only" ${mealType === 'breakfast' ? 'checked' : ''}>
+                    <span class="block p-3 text-center border border-gray-300 rounded-lg peer-checked:border-primary peer-checked:bg-primary/5 cursor-pointer">早餐</span>
+                  </label>
+                  <label class="relative">
+                    <input type="radio" name="editMealType" value="lunch" class="peer sr-only" ${mealType === 'lunch' ? 'checked' : ''}>
+                    <span class="block p-3 text-center border border-gray-300 rounded-lg peer-checked:border-primary peer-checked:bg-primary/5 cursor-pointer">午餐</span>
+                  </label>
+                  <label class="relative">
+                    <input type="radio" name="editMealType" value="dinner" class="peer sr-only" ${mealType === 'dinner' ? 'checked' : ''}>
+                    <span class="block p-3 text-center border border-gray-300 rounded-lg peer-checked:border-primary peer-checked:bg-primary/5 cursor-pointer">晚餐</span>
+                  </label>
+                  <label class="relative">
+                    <input type="radio" name="editMealType" value="snack" class="peer sr-only" ${mealType === 'snack' ? 'checked' : ''}>
+                    <span class="block p-3 text-center border border-gray-300 rounded-lg peer-checked:border-primary peer-checked:bg-primary/5 cursor-pointer">加餐</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- 食物名称 -->
+              <div class="mb-6">
+                <label for="editFoodName" class="block text-gray-700 mb-2">食物名称</label>
+                <input type="text" id="editFoodName" value="${record.foodName || record.name || ''}"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="例如：鸡胸肉沙拉、燕麦粥" required>
+              </div>
+
+              <!-- 热量和营养（输入框添加step="0.01"，值显示两位小数） -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                  <label for="editCalories" class="block text-gray-700 mb-2">热量 (千卡)</label>
+                  <input type="number" step="0.01" id="editCalories" value="${formatToTwoDecimals(record.calories)}"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    placeholder="0.00" min="0" required>
+                </div>
+                <div>
+                  <label for="editServingSize" class="block text-gray-700 mb-2">份量 (克)</label>
+                  <input type="number" step="0.01" id="editServingSize" value="${formatToTwoDecimals(record.servingSize)}"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    placeholder="0.00" min="0">
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div>
+                  <label for="editProtein" class="block text-gray-700 mb-2">蛋白质 (克)</label>
+                  <input type="number" step="0.01" id="editProtein" value="${formatToTwoDecimals(record.protein)}"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    placeholder="0.00" min="0">
+                </div>
+                <div>
+                  <label for="editCarbs" class="block text-gray-700 mb-2">碳水 (克)</label>
+                  <input type="number" step="0.01" id="editCarbs" value="${formatToTwoDecimals(record.carbs)}"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    placeholder="0.00" min="0">
+                </div>
+                <div>
+                  <label for="editFat" class="block text-gray-700 mb-2">脂肪 (克)</label>
+                  <input type="number" step="0.01" id="editFat" value="${formatToTwoDecimals(record.fat)}"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    placeholder="0.00" min="0">
+                </div>
+              </div>
+
+              <!-- 时间选择 -->
+              <div class="mb-6">
+                <label for="editMealTime" class="block text-gray-700 mb-2">进食时间</label>
+                <input type="time" id="editMealTime" value="${record.mealTime || '08:00'}"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+              </div>
+
+              <!-- 备注 -->
+              <div class="mb-6">
+                <label for="editNotes" class="block text-gray-700 mb-2">备注 (可选)</label>
+                <textarea id="editNotes" rows="3"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="添加一些备注信息...">${record.notes || ''}</textarea>
+              </div>
+
+              <!-- 操作按钮 -->
+              <div class="flex space-x-4">
+                <button type="button" id="cancelEditRecord"
+                  class="flex-1 bg-gray-100 text-gray-700 py-3 rounded-lg hover:bg-gray-200 transition font-medium">
+                  取消
+                </button>
+                <button type="submit"
+                  class="flex-1 bg-primary text-white py-3 rounded-lg hover:bg-primary/90 transition font-medium">
+                  保存修改
+                </button>
+                <button type="button" id="deleteThisRecord"
+                  class="flex-1 bg-red-100 text-red-600 py-3 rounded-lg hover:bg-red-200 transition font-medium">
+                  删除记录
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `;
+
+      // 添加到页面
+      document.body.appendChild(editModal);
+      document.body.style.overflow = 'hidden';
+
+      // 绑定事件
+      bindEditModalEvents(editModal, dateKey, mealType, index, record);
+    }
+
+    // 绑定编辑模态框事件
+    function bindEditModalEvents(modal, originalDateKey, originalMealType, index, originalRecord) {
+      const closeBtn = modal.querySelector('#closeEditModal');
+      const cancelBtn = modal.querySelector('#cancelEditRecord');
+      const deleteBtn = modal.querySelector('#deleteThisRecord');
+      const editForm = modal.querySelector('#editRecordForm');
+
+      // 关闭模态框
+      function closeModal() {
+        if (modal && modal.parentNode) {
+          modal.remove();
+        }
+        document.body.style.overflow = '';
+      }
+
+      closeBtn.addEventListener('click', closeModal);
+      cancelBtn.addEventListener('click', closeModal);
+
+      // 点击模态框外部关闭
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          closeModal();
+        }
+      });
+
+      // 删除记录
+      deleteBtn.addEventListener('click', function () {
+        const foodName = document.getElementById('editFoodName').value || originalRecord.foodName || originalRecord.name || '此记录';
+        if (confirm(`确定要删除「${foodName}」吗？`)) {
+          // 调用删除函数
+          deleteDietRecord(originalDateKey, originalMealType, index);
+          closeModal();
+        }
+      });
+
+      // 提交表单（保存修改）
+      editForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        // 获取表单数据
+        const newDateKey = document.getElementById('editDateKey').value;
+        const originalMealType = document.getElementById('editMealType').value;
+        const originalIndex = parseInt(document.getElementById('editIndex').value);
+
+        const newMealType = document.querySelector('input[name="editMealType"]:checked').value;
+        const foodName = document.getElementById('editFoodName').value.trim();
+        const calories = document.getElementById('editCalories').value;
+        const servingSize = document.getElementById('editServingSize').value;
+        const protein = document.getElementById('editProtein').value;
+        const carbs = document.getElementById('editCarbs').value;
+        const fat = document.getElementById('editFat').value;
+        const mealTime = document.getElementById('editMealTime').value;
+        const notes = document.getElementById('editNotes').value.trim();
+
+        // 验证输入
+        if (!foodName) {
+          alert('请输入食物名称');
+          return;
+        }
+
+        if (!calories || calories <= 0) {
+          alert('请输入有效的热量值（大于0）');
+          return;
+        }
+
+        // 构建更新后的记录对象（数值格式化）
+        const updatedRecord = {
+          ...originalRecord,
+          foodName: foodName,
+          name: foodName,
+          calories: formatToTwoDecimals(calories),
+          servingSize: formatToTwoDecimals(servingSize),
+          protein: formatToTwoDecimals(protein),
+          carbs: formatToTwoDecimals(carbs),
+          fat: formatToTwoDecimals(fat),
+          mealTime: mealTime,
+          notes: notes,
+          mealType: newMealType,
+          id: originalRecord.id || Date.now()
+        };
+
+        // 更新记录
+        updateDietRecord(newDateKey, originalMealType, originalIndex, newMealType, updatedRecord);
+
+        // 提示成功
+        alert(`已成功更新「${foodName}」的记录`);
+
+        // 关闭模态框
+        closeModal();
+      });
+    }
+
+    // 更新记录
+    function updateDietRecord(dateKey, oldMealType, index, newMealType, updatedRecord) {
+      const records = getDietRecords();
+
+      // 如果日期不存在，创建
+      if (!records[dateKey]) {
+        records[dateKey] = {
+          breakfast: [],
+          lunch: [],
+          dinner: [],
+          snack: []
+        };
+      }
+
+      // 如果餐次变了，需要从原餐次移除，添加到新餐次
+      if (oldMealType !== newMealType) {
+        // 从原餐次移除
+        if (records[dateKey][oldMealType] && records[dateKey][oldMealType][index]) {
+          records[dateKey][oldMealType].splice(index, 1);
+        }
+        // 添加到新餐次
+        records[dateKey][newMealType].push(updatedRecord);
+      } else {
+        // 餐次不变，直接更新
+        if (records[dateKey][oldMealType] && records[dateKey][oldMealType][index]) {
+          records[dateKey][oldMealType][index] = updatedRecord;
+        }
+      }
+
+      // 保存回localStorage
+      localStorage.setItem('dietRecords', JSON.stringify(records));
+
+      // 重新渲染页面
+      renderAllRecords();
+      updateNutritionSummary();
+      renderCalorieTrend();
+    }
 
     // ========== 近7天折线图核心逻辑 ==========
     // 生成近7天日期
@@ -834,10 +1196,10 @@
       return days;
     }
 
-    // 获取指定日期的总卡路里
+    // 获取指定日期的总卡路里（保留两位小数）
     function getDayTotalCalories(dateKey) {
       const records = getDietRecords();
-      if (!records[dateKey]) return 0;
+      if (!records[dateKey]) return 0.00;
 
       const allMealRecords = [].concat(
         records[dateKey].breakfast || [],
@@ -846,13 +1208,15 @@
         records[dateKey].snack || []
       );
 
-      return allMealRecords.reduce((sum, record) => {
-        sum += Number(record.calories) || 0;
+      const total = allMealRecords.reduce((sum, record) => {
+        sum += parseFloat(formatToTwoDecimals(record.calories)) || 0;
         return sum;
       }, 0);
+
+      return parseFloat(formatToTwoDecimals(total));
     }
 
-    // 渲染折线图
+    // 渲染折线图（数值显示两位小数）
     function renderCalorieTrend() {
       const canvas = document.getElementById('calorieTrendCanvas');
       const ctx = canvas.getContext('2d');
@@ -863,7 +1227,7 @@
       dateLabelsContainer.innerHTML = '';
 
       const last7Days = getLast7Days();
-      // 获取7天的卡路里数据
+      // 获取7天的卡路里数据（保留两位小数）
       const calorieData = last7Days.map(day => getDayTotalCalories(day.dateKey));
       // 日期标签
       const dateLabels = last7Days.map(day => day.display);
@@ -897,10 +1261,10 @@
         ctx.lineTo(canvas.width - padding, yPos);
         ctx.stroke();
 
-        // 标注千卡数
+        // 标注千卡数（保留两位小数）
         ctx.fillStyle = '#94a3b8';
         ctx.font = '10px sans-serif';
-        ctx.fillText(`${y}`, padding - 30, yPos + 4);
+        ctx.fillText(`${formatToTwoDecimals(y)}`, padding - 30, yPos + 4);
       }
 
       // 绘制折线
@@ -928,11 +1292,11 @@
         ctx.fill();
         ctx.stroke();
 
-        // 标注数值
+        // 标注数值（保留两位小数）
         if (cal > 0) {
           ctx.fillStyle = '#1e293b';
           ctx.font = '11px sans-serif';
-          ctx.fillText(`${cal}`, xPos - 10, yPos - 10);
+          ctx.fillText(`${formatToTwoDecimals(cal)}`, xPos - 10, yPos - 10);
         }
       });
       ctx.strokeStyle = '#22c55e';
@@ -973,11 +1337,6 @@
         renderCalorieTrend();
       });
     });
-
-    // 编辑记录（预留方法，可扩展）
-    function editRecord(mealType, index) {
-      alert('编辑功能可在此扩展，当前点击的是：' + getMealTypeName(mealType) + ' 第' + (index + 1) + '条记录');
-    }
   </script>
 </body>
 
