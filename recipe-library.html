@@ -124,9 +124,9 @@
             <div class="bg-white rounded-xl shadow-lg p-6 mb-8 max-w-5xl mx-auto">
                 <div class="flex flex-col md:flex-row gap-4">
                     <div class="flex-1">
-                        <input type="text" id="recipeSearchInput" placeholder="搜索食谱（如：pasta, chicken, salad）"
+                        <input type="text" id="recipeSearchInput" placeholder="搜索食谱（如：意大利面、鸡肉、沙拉）"
                             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                            value="chicken">
+                            value="鸡肉">
                     </div>
                     <select id="recipeDietSelect"
                         class="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
@@ -250,21 +250,25 @@
         </div>
     </footer>
 
-    <!-- 核心JS：调用API获取食谱 -->
+    <!-- 核心JS：调用API获取食谱并翻译 -->
     <script>
-        // Spoonacular API配置
-        const API_KEY = '3c0dc02917f84e0e97da19b1fa6b97ee'; // 替换为你的API Key
-        const BASE_URL = 'https://api.spoonacular.com/recipes';
-        const SEARCH_ENDPOINT = `${BASE_URL}/complexSearch`;
-        const RECIPE_INFO_ENDPOINT = `${BASE_URL}/{id}/information`;
+        // API配置
+        const SPOONACULAR_API_KEY = 'db607d56abf64ab687995b410c4a1880'; // 确保此Key有效
+        const DEEPSEEK_API_KEY = 'sk-85a83f0b2b7d410b91beae544ffaa7bd'; // 确保此Key有效
+        const SPOONACULAR_BASE_URL = 'https://api.spoonacular.com/recipes';
+        const SPOONACULAR_SEARCH_ENDPOINT = `${SPOONACULAR_BASE_URL}/complexSearch`;
+        const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions'; // 修正DeepSeek API端点
 
         // 当前分页状态
         let currentPage = 1;
-        let currentQuery = 'chicken';
+        let currentQuery = '鸡肉';
         let currentDiet = '';
         let currentCuisine = '';
         let totalResults = 0;
         const resultsPerPage = 12; // 每页显示12个结果
+
+        // 缓存已翻译的内容
+        const translationCache = new Map();
 
         // 移动端菜单
         document.getElementById('menuBtn').addEventListener('click', () => {
@@ -295,11 +299,72 @@
             document.getElementById('pagination').classList.add('hidden');
         }
 
-        // 构建API请求URL
-        function buildApiUrl(page = 1) {
+        // 中文关键词转英文（基础映射表）
+        const keywordTranslations = {
+            '鸡肉': 'chicken',
+            '牛肉': 'beef',
+            '猪肉': 'pork',
+            '鱼': 'fish',
+            '虾': 'shrimp',
+            '蔬菜': 'vegetables',
+            '沙拉': 'salad',
+            '意大利面': 'pasta',
+            '米饭': 'rice',
+            '汤': 'soup',
+            '蛋糕': 'cake',
+            '面包': 'bread'
+        };
+
+        // 翻译搜索关键词为英文
+        async function translateKeyword(text) {
+            // 先检查是否在基础映射表中
+            if (keywordTranslations[text]) {
+                return keywordTranslations[text];
+            }
+
+            // 否则使用DeepSeek翻译API
+            try {
+                const response = await fetch(DEEPSEEK_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        model: 'deepseek-chat',
+                        messages: [
+                            {
+                                role: 'system',
+                                content: '你是一个翻译助手，只需要将中文食物名称翻译成对应的英文单词，不要添加任何额外内容。'
+                            },
+                            {
+                                role: 'user',
+                                content: text
+                            }
+                        ],
+                        temperature: 0.1,
+                        max_tokens: 50
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`翻译API请求失败: ${response.status}`);
+                }
+
+                const data = await response.json();
+                return data.choices[0].message.content.trim().toLowerCase();
+            } catch (error) {
+                console.error('关键词翻译失败:', error);
+                // 翻译失败时返回原文本（可能导致搜索无结果）
+                return text;
+            }
+        }
+
+        // 构建Spoonacular API请求URL
+        function buildSpoonacularApiUrl(page = 1, query) {
             const params = new URLSearchParams({
-                apiKey: API_KEY,
-                query: currentQuery || 'chicken',
+                apiKey: SPOONACULAR_API_KEY,
+                query: query,
                 number: resultsPerPage,
                 offset: (page - 1) * resultsPerPage,
                 addRecipeInformation: true,
@@ -309,7 +374,72 @@
             if (currentDiet) params.append('diet', currentDiet);
             if (currentCuisine) params.append('cuisine', currentCuisine);
 
-            return `${SEARCH_ENDPOINT}?${params.toString()}`;
+            return `${SPOONACULAR_SEARCH_ENDPOINT}?${params.toString()}`;
+        }
+
+        // 使用DeepSeek API翻译文本
+        async function translateText(text) {
+            if (!text || text.trim() === '') return '';
+
+            // 检查缓存
+            const cacheKey = text.substring(0, 100); // 使用前100字符作为缓存键
+            if (translationCache.has(cacheKey)) {
+                return translationCache.get(cacheKey);
+            }
+
+            try {
+                const response = await fetch(DEEPSEEK_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        model: 'deepseek-chat',
+                        messages: [
+                            {
+                                role: 'system',
+                                content: '你是一个专业的美食翻译助手，请将以下英文食谱内容翻译成地道的中文，保持专业性和准确性。'
+                            },
+                            {
+                                role: 'user',
+                                content: `请将以下内容翻译成中文：${text}`
+                            }
+                        ],
+                        temperature: 0.3,
+                        max_tokens: 1000
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`翻译API请求失败: ${response.status}`);
+                }
+
+                const data = await response.json();
+                const translatedText = data.choices[0].message.content.trim();
+
+                // 缓存结果
+                translationCache.set(cacheKey, translatedText);
+                return translatedText;
+            } catch (error) {
+                console.error('翻译失败:', error);
+                // 如果翻译失败，返回原始文本
+                return text;
+            }
+        }
+
+        // 翻译食谱数据
+        async function translateRecipeData(recipe) {
+            const [translatedTitle, translatedSummary] = await Promise.all([
+                translateText(recipe.title),
+                translateText(recipe.summary ? recipe.summary.replace(/<[^>]*>/g, '') : '')
+            ]);
+
+            return {
+                ...recipe,
+                translatedTitle: translatedTitle || recipe.title,
+                translatedSummary: translatedSummary || (recipe.summary ? recipe.summary.replace(/<[^>]*>/g, '') : '暂无描述')
+            };
         }
 
         // 获取食谱数据
@@ -317,8 +447,12 @@
             showLoading(true);
 
             try {
-                const url = buildApiUrl(page);
-                console.log('Fetching from:', url); // 调试用
+                // 先将中文关键词翻译成英文
+                const englishQuery = await translateKeyword(currentQuery);
+                console.log('翻译后的搜索关键词:', englishQuery);
+
+                const url = buildSpoonacularApiUrl(page, englishQuery);
+                console.log('从Spoonacular获取数据:', url);
 
                 const response = await fetch(url);
 
@@ -330,7 +464,15 @@
 
                 // 处理结果
                 if (data.results && data.results.length > 0) {
-                    renderRecipes(data.results);
+                    // 翻译所有食谱
+                    showLoading(true);
+                    document.getElementById('loadingTip').querySelector('p').textContent = '正在翻译食谱内容...';
+
+                    const translatedRecipes = await Promise.all(
+                        data.results.map(recipe => translateRecipeData(recipe))
+                    );
+
+                    renderRecipes(translatedRecipes);
                     updatePagination(data.totalResults, page);
                 } else {
                     document.getElementById('noResultTip').classList.remove('hidden');
@@ -371,7 +513,7 @@
                 card.innerHTML = `
                     <div class="relative h-48">
                         <img src="${recipe.image || 'https://images.unsplash.com/photo-1490818387583-1baba5e638af?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80'}" 
-                             alt="${recipe.title}" 
+                             alt="${recipe.translatedTitle || recipe.title}" 
                              class="w-full h-full object-cover">
                         <div class="absolute top-3 left-3">
                             <span class="bg-primary/90 text-white text-xs px-2 py-1 rounded-full">
@@ -382,18 +524,16 @@
                         '<span class="absolute top-3 right-3 bg-blue-500/90 text-white text-xs px-2 py-1 rounded-full">无麸质</span>' : ''}
                     </div>
                     <div class="p-6 flex-grow flex flex-col">
-                        <h3 class="text-xl font-bold text-dark mb-2">${recipe.title}</h3>
+                        <h3 class="text-xl font-bold text-dark mb-2">${recipe.translatedTitle || recipe.title}</h3>
                         
                         <div class="flex justify-between items-center text-sm text-gray-500 mb-4">
                             <span><i class="fa fa-clock-o mr-1"></i> ${prepTime}</span>
                             <span><i class="fa fa-fire mr-1 text-secondary"></i> ${calories}</span>
-                            <span><i class="fa fa-users mr-1"></i> ${recipe.servings || '未知'}</span>
+                            <span><i class="fa fa-users mr-1"></i> ${recipe.servings || '未知'}人份</span>
                         </div>
                         
                         <div class="mb-4 flex-grow">
-                            <p class="text-gray-600 text-sm line-clamp-3">${recipe.summary ?
-                        recipe.summary.replace(/<[^>]*>/g, '').substring(0, 150) + '...' :
-                        '暂无描述'}</p>
+                            <p class="text-gray-600 text-sm line-clamp-3">${recipe.translatedSummary.substring(0, 150) + '...'}</p>
                         </div>
                         
                         <div class="flex justify-between items-center mt-4">
@@ -403,7 +543,7 @@
                                 查看食谱 <i class="fa fa-external-link ml-1"></i>
                             </a>
                             <button class="text-secondary hover:text-secondary/80 font-medium" 
-                                    onclick="saveRecipeToFavorites(${recipe.id}, '${recipe.title}')">
+                                    onclick="saveRecipeToFavorites(${recipe.id}, '${recipe.translatedTitle || recipe.title}')">
                                 <i class="fa fa-heart-o mr-1"></i> 收藏
                             </button>
                         </div>
@@ -411,9 +551,21 @@
                         ${recipe.diets && recipe.diets.length > 0 ?
                         `<div class="mt-4 pt-4 border-t border-gray-100">
                                 <div class="flex flex-wrap gap-1">
-                                    ${recipe.diets.slice(0, 3).map(diet =>
-                            `<span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">${diet}</span>`
-                        ).join('')}
+                                    ${recipe.diets.slice(0, 3).map(diet => {
+                            let dietName = diet;
+                            // 翻译常见的饮食类型
+                            const dietTranslations = {
+                                'vegetarian': '素食',
+                                'vegan': '纯素',
+                                'gluten free': '无麸质',
+                                'ketogenic': '生酮',
+                                'paleo': '原始饮食',
+                                'dairy free': '无乳制品',
+                                'lacto ovo vegetarian': '蛋奶素'
+                            };
+                            dietName = dietTranslations[diet] || diet;
+                            return `<span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">${dietName}</span>`;
+                        }).join('')}
                                 </div>
                             </div>` : ''
                     }
@@ -451,7 +603,7 @@
             currentPage = 1;
 
             if (!currentQuery) {
-                currentQuery = 'chicken'; // 默认搜索词
+                currentQuery = '鸡肉'; // 默认搜索词
             }
 
             fetchRecipes(currentPage);
@@ -485,7 +637,6 @@
         // 收藏食谱
         function saveRecipeToFavorites(recipeId, recipeTitle) {
             if (confirm(`是否要将 "${recipeTitle}" 加入收藏夹？`)) {
-                // 这里可以添加收藏逻辑，比如保存到localStorage
                 let favorites = JSON.parse(localStorage.getItem('recipeFavorites') || '[]');
                 if (!favorites.some(fav => fav.id === recipeId)) {
                     favorites.push({ id: recipeId, title: recipeTitle, date: new Date() });
@@ -500,8 +651,12 @@
         // 页面加载时初始化
         window.onload = function () {
             // 检查是否有API Key，如果没有给出提示
-            if (API_KEY === 'YOUR_API_KEY') {
-                showError('请先设置API Key。访问 https://spoonacular.com/food-api 注册获取API Key');
+            if (SPOONACULAR_API_KEY === 'YOUR_API_KEY') {
+                showError('请先设置Spoonacular API Key。访问 https://spoonacular.com/food-api 注册获取API Key');
+                return;
+            }
+            if (DEEPSEEK_API_KEY === 'YOUR_DEEPSEEK_API_KEY') {
+                showError('请先设置DeepSeek API Key');
                 return;
             }
             fetchRecipes();
